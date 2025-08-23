@@ -1,40 +1,43 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 
-// Import our new API service
-import { loginUser } from '@/services/api';
+// Import the registerUser function from our API service
+import { registerUser } from '@/services/api';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
-const LoginPage: React.FC = () => {
+const SignUpPage: React.FC = () => {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null); // State to hold error messages
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
-    setError(null); // Clear previous errors
+  const handleSignUp = async () => {
+    setError(null);
     try {
-      const { data } = await loginUser({ email, password });
-      
-      // The backend sends back user data and a token upon successful login
-      console.log('Login successful:', data);
+      const { data } = await registerUser({ username, email, password });
+      console.log('Registration successful:', data);
 
-      // Store the token to keep the user logged in
+      // Store auth token and user info, just like in login
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userInfo', JSON.stringify(data));
 
-      // Redirect to the chat page
+      // Redirect to the main chat page
       navigate('/');
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      // If the backend sends an error (e.g., wrong password), display it
-      console.error('Login failed:', err.response?.data?.message || err.message);
-      setError(err.response?.data?.message || 'An error occurred. Please try again.');
+    } catch (err) {
+      if (isAxiosError(err) && err.response) {
+        console.error('Registration failed:', err.response.data.message);
+        setError(err.response.data.message || 'An error occurred.');
+      } else {
+        console.error('An unexpected error occurred:', err);
+        setError('An unexpected error occurred. Please try again.');
+      }
     }
   };
 
@@ -42,12 +45,22 @@ const LoginPage: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to continue to Link-Up</CardDescription>
+          <CardTitle className="text-3xl font-bold">Create an Account</CardTitle>
+          <CardDescription>Enter your details to get started</CardDescription>
         </CardHeader>
         <CardContent>
           {error && <p className="text-sm text-center text-destructive mb-4">{error}</p>}
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="yourusername"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -71,13 +84,13 @@ const LoginPage: React.FC = () => {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col">
-          <Button className="w-full" onClick={handleLogin}>
-            Login
+          <Button className="w-full" onClick={handleSignUp}>
+            Sign Up
           </Button>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link to="/signUpPage" className="text-primary hover:underline">
-              Sign Up
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:underline">
+              Login
             </Link>
           </p>
         </CardFooter>
@@ -86,4 +99,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default SignUpPage;
