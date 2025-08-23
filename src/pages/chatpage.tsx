@@ -112,7 +112,7 @@ const ChatPage: React.FC = () => {
             {/* Sidebar */}
             <aside className="hidden md:flex md:flex-col md:w-80 bg-muted/40 border-r">
                 <header className="p-4 border-b">
-                    <h1 className="text-xl font-bold">Link-Up</h1>
+                    <h1 className="text-xl font-bold">PixelChat</h1>
                 </header>
                 <div className="p-4">
                     <div className="relative">

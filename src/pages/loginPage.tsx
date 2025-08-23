@@ -43,7 +43,7 @@ const LoginPage: React.FC = () => {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to continue to Link-Up</CardDescription>
+          <CardDescription>Sign in to continue to PixelChat</CardDescription>
         </CardHeader>
         <CardContent>
           {error && <p className="text-sm text-center text-destructive mb-4">{error}</p>}
