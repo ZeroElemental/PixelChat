@@ -1,6 +1,9 @@
-// server/src/types.ts
-export interface IUser {
-    username: string;
-    email: string;
-    password?: string; // Password is optional as we don't always send it back
+import { Document, Model } from "mongoose";
+
+export interface IUser extends Document {
+  username: string;
+  email: string;
+  password: string;
+  matchPassword: (enteredPassword: string) => Promise<boolean>;
 }
+export type IUserModel = Model<IUser>
