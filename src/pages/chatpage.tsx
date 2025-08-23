@@ -1,19 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { getUsers } from '@/services/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { getUsers, getMessages, sendMessage } from '@/services/api';
 import { Search, Paperclip, Send } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-// The updated Chat interface to match our backend's User model
+// Define the shape of our User/Chat and Message objects
 interface Chat {
     _id: string;
     username: string;
-    email: string; // email is also available from the backend
 }
 
-// Updated ChatListItem component to use the correct props
+interface Message {
+    _id: string;
+    sender: { _id: string; username: string; };
+    receiver: { _id: string; username: string; };
+    message: string;
+    createdAt: string;
+}
+
 const ChatListItem = ({ username, onClick, isSelected }: { username: string, onClick: () => void, isSelected: boolean }) => (
     <div
         className={`flex items-center p-2 rounded-lg cursor-pointer ${isSelected ? 'bg-muted' : 'hover:bg-muted/50'}`}
@@ -29,32 +36,75 @@ const ChatListItem = ({ username, onClick, isSelected }: { username: string, onC
     </div>
 );
 
-
 const ChatPage: React.FC = () => {
     const [chats, setChats] = useState<Chat[]>([]);
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-    const [message, setMessage] = useState('');
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [newMessage, setNewMessage] = useState('');
+    const socket = useRef<Socket | null>(null);
+    const currentUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
+    // Effect for initializing socket connection
+    useEffect(() => {
+        socket.current = io('http://localhost:5000'); // Your backend URL
+
+        // Join a room specific to the current user
+        if (currentUser?._id) {
+            socket.current.emit('joinRoom', currentUser._id);
+        }
+
+        // Listen for new messages from the server
+        socket.current.on('newMessage', (message) => {
+            setMessages((prevMessages) => [...prevMessages, message]);
+        });
+
+        // Cleanup on component unmount
+        return () => {
+            socket.current?.disconnect();
+        };
+    }, [currentUser?._id]);
+
+    // Effect for fetching users
     useEffect(() => {
         const fetchUsers = async () => {
             try {
                 const { data } = await getUsers();
                 setChats(data);
-                if (data.length > 0) {
-                    setSelectedChat(data[0]);
-                }
             } catch (error) {
                 console.error('Failed to fetch users:', error);
             }
         };
-
         fetchUsers();
     }, []);
+    
+    // Function to handle selecting a chat
+    const handleSelectChat = async (chat: Chat) => {
+        setSelectedChat(chat);
+        try {
+            const { data } = await getMessages(chat._id);
+            setMessages(data);
+        } catch (error) {
+            console.error("Failed to fetch messages", error);
+            setMessages([]);
+        }
+    };
 
-    const handleSendMessage = () => {
-        if (message.trim() === '') return;
-        console.log(`Sending message to ${selectedChat?.username}: ${message}`);
-        setMessage('');
+    // Function to handle sending a message
+    const handleSendMessage = async () => {
+        if (newMessage.trim() === '' || !selectedChat) return;
+        try {
+            const messageData = { receiverId: selectedChat._id, message: newMessage };
+            const { data: savedMessage } = await sendMessage(messageData);
+            
+            // Add sent message to our own message list immediately
+            setMessages((prevMessages) => [...prevMessages, savedMessage]);
+            
+            // Emit the message through the socket to the receiver
+            socket.current?.emit('sendMessage', savedMessage);
+            setNewMessage('');
+        } catch (error) {
+            console.error("Failed to send message", error);
+        }
     };
 
     return (
@@ -71,13 +121,12 @@ const ChatPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex-grow p-4 overflow-y-auto space-y-2">
-                    {/* CORRECTED: Use chat._id and chat.username */}
                     {chats.map((chat) => (
                         <ChatListItem
                             key={chat._id}
                             username={chat.username}
                             isSelected={selectedChat?._id === chat._id}
-                            onClick={() => setSelectedChat(chat)}
+                            onClick={() => handleSelectChat(chat)}
                         />
                     ))}
                 </div>
@@ -86,7 +135,6 @@ const ChatPage: React.FC = () => {
             {/* Main Chat Area */}
             {selectedChat ? (
                 <main className="flex-1 flex flex-col">
-                    {/* CORRECTED: Use selectedChat.username */}
                     <header className="bg-background p-4 border-b flex items-center">
                         <Avatar className="h-10 w-10 mr-4">
                             <AvatarImage src={`https://avatar.vercel.sh/${selectedChat.username}.png`} alt={selectedChat.username} />
@@ -102,12 +150,18 @@ const ChatPage: React.FC = () => {
 
                     {/* Message Area */}
                     <div className="flex-grow p-6 overflow-y-auto flex flex-col space-y-4">
-                        <div className="p-3 rounded-lg bg-muted max-w-lg self-start">
-                           Hey! How's the project coming along?
-                        </div>
-                        <div className="p-3 rounded-lg bg-primary text-primary-foreground max-w-lg self-end">
-                            It's going great! Just finished the user list.
-                        </div>
+                        {messages.map((msg) => (
+                            <div
+                                key={msg._id}
+                                className={`p-3 rounded-lg max-w-lg ${
+                                    msg.sender._id === currentUser._id
+                                        ? 'bg-primary text-primary-foreground self-end'
+                                        : 'bg-muted self-start'
+                                }`}
+                            >
+                                {msg.message}
+                            </div>
+                        ))}
                     </div>
 
                     {/* Message Input */}
@@ -117,8 +171,8 @@ const ChatPage: React.FC = () => {
                                 type="text"
                                 placeholder="Type a message..."
                                 className="pr-24"
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                             />
                             <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center space-x-1">

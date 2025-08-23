@@ -1,4 +1,7 @@
 import axios from 'axios';
+export const getMessages = (userId: string) => API.get(`/messages/${userId}`);
+export const sendMessage = (messageData: { receiverId: string; message: string }) => API.post('/messages', messageData);
+
 
 const API = axios.create({
   baseURL: 'http://localhost:5000/api',
