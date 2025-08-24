@@ -3,6 +3,8 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
+import { Toaster } from "sonner";
+
 // Import your page components
 import LoginPage from "./pages/loginPage";
 import ChatPage from "./pages/chatpage";
@@ -26,7 +28,12 @@ const router = createBrowserRouter([
 
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <Toaster position="top-right" richColors />
+      <RouterProvider router={router} />
+    </>
+  );
 }
 
 export default App;

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getFriends } = require('../controllers/userController');
+const { addFriend } = require('../controllers/friendController');
 const { protect } = require('../middleware/authMiddleware');
 
-router.get('/', protect, getFriends);
+router.post('/add', protect, addFriend);
 
 module.exports = router;
