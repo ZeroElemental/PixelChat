@@ -43,6 +43,18 @@ const acceptFriendRequest = async (req, res) => {
     }
 };
 
+const getFriendRequests = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).populate('receivedFriendRequests', 'username email');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json(user.receivedFriendRequests);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 // You can create a similar 'rejectFriendRequest' function that just uses $pull
 
-module.exports = { sendFriendRequest, acceptFriendRequest };
+module.exports = { sendFriendRequest, acceptFriendRequest, getFriendRequests  };

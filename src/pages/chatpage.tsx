@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { getFriends, getMessages, sendMessage, sendFriendRequest, uploadFile } from '@/services/api';import { Search, Paperclip, Send, UserPlus } from 'lucide-react';
+import { 
+    getFriends, 
+    getMessages, 
+    sendMessage, 
+    sendFriendRequest, 
+    getFriendRequests, 
+    acceptFriendRequest, 
+    uploadFile 
+} from '@/services/api';
+import { Search, Paperclip, Send, UserPlus, LogOut, Bell } from 'lucide-react';
 import { toast } from "sonner";
 
 import {
@@ -12,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,6 +67,7 @@ const ChatPage: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [friendUsername, setFriendUsername] = useState('');
+    const [friendRequests, setFriendRequests] = useState<Chat[]>([]);
     const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const [isTyping, setIsTyping] = useState(false);
@@ -64,98 +76,64 @@ const ChatPage: React.FC = () => {
     const messageEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
 
-    // Effect for initializing socket and fetching friends ONCE
-    // This is the CORRECTED code to replace the block above
-
-// Effect for initializing socket and fetching friends ONCE
-useEffect(() => {
-    const fetchFriends = async () => {
-        try {
-            const { data } = await getFriends();
-            setChats(data);
-        } catch (error) {
-            console.error('Failed to fetch friends:', error);
-        }
-    };
-    fetchFriends();
-    
-    socket.current = io('http://localhost:5000');
-    
-    socket.current.on('connect', () => {
-        if (currentUser?._id) {
-            socket.current?.emit('addUser', currentUser._id);
-        }
-    });
-    
-    socket.current.on('getOnlineUsers', (users: string[]) => {
-        setOnlineUsers(users);
-    });
-
-    return () => {
+    const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userInfo');
         socket.current?.disconnect();
-    };
-}, []); // This runs only ONCE when the component mounts
-
-// Effect for listening to real-time events that depend on the selected chat
-useEffect(() => {
-    if (!socket.current) return;
-
-    const handleNewMessage = (arrivingMessage: Message) => {
-        if (selectedChat && arrivingMessage.sender._id === selectedChat._id) {
-            setMessages((prevMessages) => [...prevMessages, arrivingMessage]);
-        }
+        navigate('/login');
     };
     
-    const handleUserTyping = ({ from }: { from: string }) => {
-        if (selectedChat && from === selectedChat._id) setIsTyping(true);
-    };
-
-    const handleUserStoppedTyping = ({ from }: { from: string }) => {
-        if (selectedChat && from === selectedChat._id) setIsTyping(false);
-    };
-    
-    socket.current.on('newMessage', handleNewMessage);
-    socket.current.on('userTyping', handleUserTyping);
-    socket.current.on('userStoppedTyping', handleUserStoppedTyping);
-    
-    return () => {
-        socket.current?.off('newMessage', handleNewMessage);
-        socket.current?.off('userTyping', handleUserTyping);
-        socket.current?.off('userStoppedTyping', handleUserStoppedTyping);
-    };
-}, [selectedChat]); // This effect re-runs ONLY when you select a new chat // Empty dependency array means this runs only once on mount
-
-    // Effect for listening to real-time events that depend on the selected chat
     useEffect(() => {
-        if (!socket.current) return;
-
-        const handleNewMessage = (arrivingMessage: Message) => {
-            if (selectedChat && arrivingMessage.sender._id === selectedChat._id) {
-                setMessages((prevMessages) => [...prevMessages, arrivingMessage]);
+        const fetchInitialData = async () => {
+            try {
+                const friendsRes = await getFriends();
+                setChats(friendsRes.data);
+                const requestsRes = await getFriendRequests();
+                setFriendRequests(requestsRes.data);
+            } catch (error) {
+                console.error('Failed to fetch initial data:', error);
             }
         };
+        fetchInitialData();
         
-        const handleUserTyping = ({ from }: { from: string }) => {
+        socket.current = io('http://localhost:5000');
+        socket.current.on('connect', () => {
+            if (currentUser?._id) socket.current?.emit('addUser', currentUser._id);
+        });
+        socket.current.on('getOnlineUsers', (users: string[]) => setOnlineUsers(users));
+        
+        return () => {
+            socket.current?.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!socket.current) return;
+        const handleNewMessage = (msg: Message) => {
+            if (selectedChat && msg.sender._id === selectedChat._id) {
+                setMessages(prev => [...prev, msg]);
+            }
+        };
+        const handleTyping = ({ from }: { from: string }) => {
             if (selectedChat && from === selectedChat._id) setIsTyping(true);
         };
-
-        const handleUserStoppedTyping = ({ from }: { from: string }) => {
+        const handleStopTyping = ({ from }: { from: string }) => {
             if (selectedChat && from === selectedChat._id) setIsTyping(false);
         };
-        
+
         socket.current.on('newMessage', handleNewMessage);
-        socket.current.on('userTyping', handleUserTyping);
-        socket.current.on('userStoppedTyping', handleUserStoppedTyping);
+        socket.current.on('userTyping', handleTyping);
+        socket.current.on('userStoppedTyping', handleStopTyping);
         
         return () => {
             socket.current?.off('newMessage', handleNewMessage);
-            socket.current?.off('userTyping', handleUserTyping);
-            socket.current?.off('userStoppedTyping', handleUserStoppedTyping);
+            socket.current?.off('userTyping', handleTyping);
+            socket.current?.off('userStoppedTyping', handleStopTyping);
         };
-    }, [selectedChat]); // Re-run this effect when selectedChat changes
+    }, [selectedChat]);
 
-    // Effect for auto-scrolling
     useEffect(() => {
         messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -172,7 +150,7 @@ useEffect(() => {
         }
     };
 
-    const handleTyping = () => {
+    const handleTypingChange = () => {
         if (!socket.current || !selectedChat) return;
         socket.current.emit('typing', { to: selectedChat._id });
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -204,9 +182,8 @@ useEffect(() => {
         try {
             const messageData = { receiverId: selectedChat._id, message: newMessage };
             const { data: savedMessage } = await sendMessage(messageData);
-            
             socket.current?.emit('sendMessage', savedMessage);
-            setMessages((prevMessages) => [...prevMessages, savedMessage]);
+            setMessages((prev) => [...prev, savedMessage]);
             setNewMessage('');
         } catch (error) {
             console.error("Failed to send message", error);
@@ -214,23 +191,31 @@ useEffect(() => {
     };
     
     const handleAddFriend = async () => {
-    if (friendUsername.trim() === '') return;
-    try {
-        const { data } = await sendFriendRequest(friendUsername);
-        
-        toast.success("Success!", {
-            // Use the message from the server's response
-            description: data.message,
-        });
-        setFriendUsername('');
-        setIsAddFriendOpen(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-        toast.error("Uh oh! Something went wrong.", {
-            description: error.response?.data?.message || "Could not send friend request.",
-        });
-    }
-};
+        if (friendUsername.trim() === '') return;
+        try {
+            const { data } = await sendFriendRequest(friendUsername);
+            toast.success("Success!", { description: data.message });
+            setFriendUsername('');
+            setIsAddFriendOpen(false);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            toast.error("Uh oh! Something went wrong.", { description: error.response?.data?.message || "Could not send friend request." });
+        }
+    };
+    
+    const handleAcceptRequest = async (requestFromId: string) => {
+        try {
+            const { data } = await acceptFriendRequest(requestFromId);
+            toast.success("Success!", { description: data.message });
+            const friendsRes = await getFriends();
+            setChats(friendsRes.data);
+            const requestsRes = await getFriendRequests();
+            setFriendRequests(requestsRes.data);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            toast.error("Failed to accept request.", { description: error.response?.data?.message });
+        }
+    };
 
     return (
         <div className="flex h-screen w-screen overflow-hidden text-sm bg-background text-foreground">
@@ -238,26 +223,54 @@ useEffect(() => {
             <aside className="hidden md:flex md:flex-col md:w-80 bg-muted/40 border-r">
                 <header className="p-4 border-b flex justify-between items-center">
                     <h1 className="text-xl font-bold">PixelChat</h1>
-                    <Dialog open={isAddFriendOpen} onOpenChange={setIsAddFriendOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon"> <UserPlus className="h-5 w-5" /> </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>Add Friend</DialogTitle>
-                                <DialogDescription>Enter the username of the user you want to add as a friend.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="username" className="text-right">Username</Label>
-                                    <Input id="username" value={friendUsername} onChange={(e) => setFriendUsername(e.target.value)} className="col-span-3" />
+                    <div className="flex items-center space-x-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="relative">
+                                    <Bell className="h-5 w-5" />
+                                    {friendRequests.length > 0 && (
+                                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                                <div className="grid gap-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium leading-none">Friend Requests</h4>
+                                        <p className="text-sm text-muted-foreground">Accept or decline requests.</p>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        {friendRequests.length > 0 ? friendRequests.map(req => (
+                                            <div key={req._id} className="flex items-center justify-between">
+                                                <span>{req.username}</span>
+                                                <Button size="sm" onClick={() => handleAcceptRequest(req._id)}>Accept</Button>
+                                            </div>
+                                        )) : <p className="text-sm text-muted-foreground">No new requests.</p>}
+                                    </div>
                                 </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit" onClick={handleAddFriend}>Add Friend</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                            </PopoverContent>
+                        </Popover>
+                        <Dialog open={isAddFriendOpen} onOpenChange={setIsAddFriendOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon"> <UserPlus className="h-5 w-5" /> </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                                <DialogHeader>
+                                    <DialogTitle>Add Friend</DialogTitle>
+                                    <DialogDescription>Enter the username of the user you want to add as a friend.</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="username" className="text-right">Username</Label>
+                                        <Input id="username" value={friendUsername} onChange={(e) => setFriendUsername(e.target.value)} className="col-span-3" />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit" onClick={handleAddFriend}>Add Friend</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </header>
                 <div className="p-4">
                     <div className="relative">
@@ -276,6 +289,12 @@ useEffect(() => {
                         />
                     ))}
                 </div>
+                <footer className="p-4 border-t">
+                    <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Log Out
+                    </Button>
+                </footer>
             </aside>
 
             {/* Main Chat Area */}
@@ -334,7 +353,7 @@ useEffect(() => {
                                 value={newMessage}
                                 onChange={(e) => {
                                     setNewMessage(e.target.value);
-                                    handleTyping();
+                                    handleTypingChange();
                                 }}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                             />
@@ -345,7 +364,6 @@ useEffect(() => {
                                     onChange={handleFileChange}
                                     className="hidden"
                                     aria-label="Upload file"
-
                                 />
                                 <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
                                     <Paperclip className="h-4 w-4" />
