@@ -1,7 +1,7 @@
 # PixelChat: Real-Time Chat Application
 
-![PixelChat Chat Interface](https://i.imgur.com/your-screenshot-url.png)
-*(Replace the URL above with a screenshot of your application)*
+<img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/b2d6b944-e1da-4cea-bcb2-168bbbb5dae0" />
+
 
 PixelChat is a modern, full-stack, real-time chat application built with React, TypeScript, and Node.js. It features a clean, responsive UI inspired by platforms like Discord and WhatsApp, and provides a complete, feature-rich communication experience.
 
