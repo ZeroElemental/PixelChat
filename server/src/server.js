@@ -20,7 +20,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "https://pixel-chat-nine.vercel.app", // Your Vercel frontend URL
+    origin: "https://pixel-chat-nine.vercel.app/login", // Your Vercel frontend URL
     methods: ["GET", "POST"]
   }
 });
