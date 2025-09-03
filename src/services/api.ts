@@ -31,11 +31,16 @@ export const registerUser = (userData: RegisterData) => API.post('/auth/register
 export const getFriends = () => API.get('/users');
 export const getMessages = (userId: string) => API.get(`/messages/${userId}`);
 export const sendMessage = (messageData: { receiverId: string; message: string }) => API.post('/messages', messageData);
-export const addFriend = (username: string) => API.post('/friends/add', { username });
 export const uploadFile = (formData: FormData) => API.post('/messages/upload', formData, {
   headers: {
     'Content-Type': 'multipart/form-data',
   },
 });
+
+// --- New Friend Request Functions ---
+export const sendFriendRequest = (username: string) => API.post('/friends/send-request', { username });
+export const acceptFriendRequest = (requestFromId: string) => API.post('/friends/accept-request', { requestFromId });
+// Add a function to get pending requests
+export const getFriendRequests = () => API.get('/friends/requests'); // We will build this backend route next
 
 export default API;

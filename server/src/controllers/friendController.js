@@ -1,25 +1,48 @@
+// server/src/controllers/friendController.js
 const User = require('../models/User');
 
-// Add a new friend by username
-const addFriend = async (req, res) => {
+// Send a friend request
+const sendFriendRequest = async (req, res) => {
     const { username } = req.body;
-    const userId = req.user._id;
+    const senderId = req.user._id;
 
     try {
-        const friendToAdd = await User.findOne({ username: username });
-        if (!friendToAdd) {
+        const receiver = await User.findOne({ username: username });
+        if (!receiver) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Add friend to current user's list
-        await User.findByIdAndUpdate(userId, { $addToSet: { friends: friendToAdd._id } });
-        // Add current user to friend's list
-        await User.findByIdAndUpdate(friendToAdd._id, { $addToSet: { friends: userId } });
+        // Add receiver to sender's sent requests
+        await User.findByIdAndUpdate(senderId, { $addToSet: { sentFriendRequests: receiver._id } });
+        // Add sender to receiver's received requests
+        await User.findByIdAndUpdate(receiver._id, { $addToSet: { receivedFriendRequests: senderId } });
 
-        res.status(200).json({ message: 'Friend added successfully' });
+        res.status(200).json({ message: 'Friend request sent' });
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
 };
 
-module.exports = { addFriend };
+// Accept a friend request
+const acceptFriendRequest = async (req, res) => {
+    const { requestFromId } = req.body; // ID of the user who sent the request
+    const currentUserId = req.user._id;
+
+    try {
+        // Add each user to the other's friends list
+        await User.findByIdAndUpdate(currentUserId, { $addToSet: { friends: requestFromId } });
+        await User.findByIdAndUpdate(requestFromId, { $addToSet: { friends: currentUserId } });
+
+        // Remove the request from both users' request lists
+        await User.findByIdAndUpdate(currentUserId, { $pull: { receivedFriendRequests: requestFromId } });
+        await User.findByIdAndUpdate(requestFromId, { $pull: { sentFriendRequests: currentUserId } });
+        
+        res.status(200).json({ message: 'Friend request accepted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// You can create a similar 'rejectFriendRequest' function that just uses $pull
+
+module.exports = { sendFriendRequest, acceptFriendRequest };
