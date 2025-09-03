@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getFriends, getMessages, sendMessage, addFriend, uploadFile } from '@/services/api';
-import { Search, Paperclip, Send, UserPlus } from 'lucide-react';
+import { getFriends, getMessages, sendMessage, sendFriendRequest, uploadFile } from '@/services/api';import { Search, Paperclip, Send, UserPlus } from 'lucide-react';
 import { toast } from "sonner";
 
 import {
@@ -67,33 +66,65 @@ const ChatPage: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Effect for initializing socket and fetching friends ONCE
-    useEffect(() => {
-        const fetchFriends = async () => {
-            try {
-                const { data } = await getFriends();
-                setChats(data);
-            } catch (error) {
-                console.error('Failed to fetch friends:', error);
-            }
-        };
-        fetchFriends();
-        
-        socket.current = io('http://localhost:5000');
-        
-        socket.current.on('connect', () => {
-            if (currentUser?._id) {
-                socket.current?.emit('addUser', currentUser._id);
-            }
-        });
-        
-        socket.current.on('getOnlineUsers', (users: string[]) => {
-            setOnlineUsers(users);
-        });
+    // This is the CORRECTED code to replace the block above
 
-        return () => {
-            socket.current?.disconnect();
-        };
-    }, []); // Empty dependency array means this runs only once on mount
+// Effect for initializing socket and fetching friends ONCE
+useEffect(() => {
+    const fetchFriends = async () => {
+        try {
+            const { data } = await getFriends();
+            setChats(data);
+        } catch (error) {
+            console.error('Failed to fetch friends:', error);
+        }
+    };
+    fetchFriends();
+    
+    socket.current = io('http://localhost:5000');
+    
+    socket.current.on('connect', () => {
+        if (currentUser?._id) {
+            socket.current?.emit('addUser', currentUser._id);
+        }
+    });
+    
+    socket.current.on('getOnlineUsers', (users: string[]) => {
+        setOnlineUsers(users);
+    });
+
+    return () => {
+        socket.current?.disconnect();
+    };
+}, []); // This runs only ONCE when the component mounts
+
+// Effect for listening to real-time events that depend on the selected chat
+useEffect(() => {
+    if (!socket.current) return;
+
+    const handleNewMessage = (arrivingMessage: Message) => {
+        if (selectedChat && arrivingMessage.sender._id === selectedChat._id) {
+            setMessages((prevMessages) => [...prevMessages, arrivingMessage]);
+        }
+    };
+    
+    const handleUserTyping = ({ from }: { from: string }) => {
+        if (selectedChat && from === selectedChat._id) setIsTyping(true);
+    };
+
+    const handleUserStoppedTyping = ({ from }: { from: string }) => {
+        if (selectedChat && from === selectedChat._id) setIsTyping(false);
+    };
+    
+    socket.current.on('newMessage', handleNewMessage);
+    socket.current.on('userTyping', handleUserTyping);
+    socket.current.on('userStoppedTyping', handleUserStoppedTyping);
+    
+    return () => {
+        socket.current?.off('newMessage', handleNewMessage);
+        socket.current?.off('userTyping', handleUserTyping);
+        socket.current?.off('userStoppedTyping', handleUserStoppedTyping);
+    };
+}, [selectedChat]); // This effect re-runs ONLY when you select a new chat // Empty dependency array means this runs only once on mount
 
     // Effect for listening to real-time events that depend on the selected chat
     useEffect(() => {
@@ -183,19 +214,23 @@ const ChatPage: React.FC = () => {
     };
     
     const handleAddFriend = async () => {
-        if (friendUsername.trim() === '') return;
-        try {
-            const { data } = await addFriend(friendUsername);
-            toast.success("Success!", { description: data.message });
-            setFriendUsername('');
-            setIsAddFriendOpen(false);
-            const { data: updatedFriends } = await getFriends();
-            setChats(updatedFriends);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            toast.error("Uh oh! Something went wrong.", { description: error.response?.data?.message || "Could not add friend." });
-        }
-    };
+    if (friendUsername.trim() === '') return;
+    try {
+        const { data } = await sendFriendRequest(friendUsername);
+        
+        toast.success("Success!", {
+            // Use the message from the server's response
+            description: data.message,
+        });
+        setFriendUsername('');
+        setIsAddFriendOpen(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+        toast.error("Uh oh! Something went wrong.", {
+            description: error.response?.data?.message || "Could not send friend request.",
+        });
+    }
+};
 
     return (
         <div className="flex h-screen w-screen overflow-hidden text-sm bg-background text-foreground">

@@ -1,12 +1,17 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+// server/src/models/User.js
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Add this line
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  sentFriendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  receivedFriendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
+
+// ... rest of the file remains the same
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {

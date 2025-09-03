@@ -2,23 +2,26 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-
 import { Toaster } from "sonner";
 
-// Import your page components
+// Import your page and protected route components
 import LoginPage from "./pages/loginPage";
 import ChatPage from "./pages/chatpage";
-import SignUpPage from "./pages/signUpPage"; 
+import SignUpPage from "./pages/signUpPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute"; // 1. Import ProtectedRoute
 
-// Define the routes for your application
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <ChatPage />, 
+    element: ( // 2. Wrap ChatPage with ProtectedRoute
+      <ProtectedRoute>
+        <ChatPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/login",
-    element: <LoginPage />, 
+    element: <LoginPage />,
   },
   {
     path: "/signup",
@@ -26,12 +29,11 @@ const router = createBrowserRouter([
   },
 ]);
 
-
 function App() {
   return (
     <>
-      <Toaster position="top-right" richColors />
       <RouterProvider router={router} />
+      <Toaster richColors />
     </>
   );
 }
