@@ -39,8 +39,8 @@ export const uploadFile = (formData: FormData) => API.post('/messages/upload', f
 
 // --- New Friend Request Functions ---
 export const sendFriendRequest = (username: string) => API.post('/friends/send-request', { username });
+// src/services/api.ts
+// ... (other functions)
 export const acceptFriendRequest = (requestFromId: string) => API.post('/friends/accept-request', { requestFromId });
-// Add a function to get pending requests
-export const getFriendRequests = () => API.get('/friends/requests'); // We will build this backend route next
-
+export const getFriendRequests = () => API.get('/friends/requests'); // Add this line
 export default API;
