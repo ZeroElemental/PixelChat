@@ -75,7 +75,7 @@ const ChatPage: React.FC = () => {
     const currentUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
     const currentUserIdRef = useRef<string | undefined>(currentUser?._id);
     const messageEndRef = useRef<HTMLDivElement>(null);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
 
