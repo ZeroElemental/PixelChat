@@ -27,8 +27,8 @@ const SignUpPage: React.FC = () => {
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userInfo', JSON.stringify(data));
 
-      // Redirect to the main chat page
-      navigate('/');
+  // Redirect to the main chat page
+  navigate('/chat');
 
     } catch (err) {
       if (isAxiosError(err) && err.response) {

@@ -1,19 +1,21 @@
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 
 // Import your page and protected route components
 import LoginPage from "./pages/loginPage";
 import ChatPage from "./pages/chatpage";
 import SignUpPage from "./pages/signUpPage";
+import Home from "./pages/home";
 import ProtectedRoute from "./components/auth/ProtectedRoute"; // 1. Import ProtectedRoute
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: ( // 2. Wrap ChatPage with ProtectedRoute
+    element: <Home />,
+  },
+  {
+    path: "/chat",
+    element: (
       <ProtectedRoute>
         <ChatPage />
       </ProtectedRoute>

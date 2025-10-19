@@ -27,8 +27,8 @@ const LoginPage: React.FC = () => {
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userInfo', JSON.stringify(data));
 
-      // Redirect to the chat page
-      navigate('/');
+  // Redirect to the chat page
+  navigate('/chat');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -76,7 +76,7 @@ const LoginPage: React.FC = () => {
           </Button>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <Link to="/signUp" className="text-primary hover:underline">
+            <Link to="/signup" className="text-primary hover:underline">
               Sign Up
             </Link>
           </p>

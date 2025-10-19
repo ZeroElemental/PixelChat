@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
     "multer": "^2.0.2",
+    "pixelchat": "file:..",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
