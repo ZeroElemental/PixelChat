@@ -73,6 +73,7 @@ const ChatPage: React.FC = () => {
     const [isTyping, setIsTyping] = useState(false);
     const socket = useRef<Socket | null>(null);
     const currentUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    const currentUserIdRef = useRef<string | undefined>(currentUser?._id);
     const messageEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +83,7 @@ const ChatPage: React.FC = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userInfo');
         socket.current?.disconnect();
-        navigate('/login');
+    navigate('/login');
     };
     
     useEffect(() => {
@@ -98,9 +99,10 @@ const ChatPage: React.FC = () => {
         };
         fetchInitialData();
         
-        socket.current = io('http://localhost:5000');
+    const base = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000';
+    socket.current = io(base);
         socket.current.on('connect', () => {
-            if (currentUser?._id) socket.current?.emit('addUser', currentUser._id);
+            if (currentUserIdRef.current) socket.current?.emit('addUser', currentUserIdRef.current);
         });
         socket.current.on('getOnlineUsers', (users: string[]) => setOnlineUsers(users));
         

@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Determine API base URL with fallbacks for local dev and production
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) || 'http://localhost:5000';
+
 const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+  baseURL: `${API_BASE}/api`,
 });
 
 // This interceptor adds the auth token to every request
@@ -39,8 +42,6 @@ export const uploadFile = (formData: FormData) => API.post('/messages/upload', f
 
 // --- New Friend Request Functions ---
 export const sendFriendRequest = (username: string) => API.post('/friends/send-request', { username });
-// src/services/api.ts
-// ... (other functions)
 export const acceptFriendRequest = (requestFromId: string) => API.post('/friends/accept-request', { requestFromId });
 export const getFriendRequests = () => API.get('/friends/requests'); // Add this line
 export default API;
