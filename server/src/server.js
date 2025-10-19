@@ -12,16 +12,17 @@ const userRoutes = require('./routes/userRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 
-// Correctly load the .env file from the parent 'server' directory
-dotenv.config({ path: '../.env' });
+// Load environment from the server directory .env
+dotenv.config();
 connectDB();
 
 const app = express();
 const server = http.createServer(app);
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:5174'];
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || DEV_ORIGINS;
 const io = new Server(server, {
   cors: {
-    origin: [CLIENT_ORIGIN],
+    origin: CLIENT_ORIGIN,
     methods: ["GET", "POST"],
     credentials: true,
   }

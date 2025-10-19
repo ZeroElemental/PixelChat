@@ -100,9 +100,12 @@ const ChatPage: React.FC = () => {
         fetchInitialData();
         
     const base = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000';
-    socket.current = io(base);
+        socket.current = io(base);
         socket.current.on('connect', () => {
-            if (currentUserIdRef.current) socket.current?.emit('addUser', currentUserIdRef.current);
+            if (currentUserIdRef.current) {
+                socket.current?.emit('addUser', currentUserIdRef.current);
+                socket.current?.emit('joinRoom', currentUserIdRef.current);
+            }
         });
         socket.current.on('getOnlineUsers', (users: string[]) => setOnlineUsers(users));
         
