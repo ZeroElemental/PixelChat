@@ -1,4 +1,6 @@
 const express = require('express');
+const compression = require('compression');
+const helmet = require('helmet');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
@@ -29,6 +31,8 @@ const io = new Server(server, {
 });
 
 app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+app.use(helmet());
+app.use(compression());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
@@ -107,16 +111,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
-const PORT = DEFAULT_PORT;
-server.listen(PORT).on('listening', () => {
+const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    const fallbackPort = PORT + 1;
-    console.warn(`Port ${PORT} in use, retrying on ${fallbackPort}...`);
-    server.listen(fallbackPort);
-  } else {
-    throw err;
-  }
 });
