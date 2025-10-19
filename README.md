@@ -1,3 +1,59 @@
+# PixelChat
+
+Modern chat application with React + Vite (frontend) and Express + Socket.IO (backend).
+
+## Local development
+
+1. Frontend env: create `.env` in project root
+
+```
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+2. Backend env: create `server/.env`
+
+```
+PORT=5000
+CLIENT_ORIGIN=http://localhost:5173
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=change-me
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+3. Install and run
+
+```
+npm install
+npm --prefix server install
+npm run dev
+```
+
+## Deployment
+
+### Frontend (Vercel)
+
+- Set Project Settings → Environment Variables:
+  - `VITE_API_BASE_URL` → https://your-backend.onrender.com
+- Deploy. `vercel.json` routes SPA to `index.html`.
+
+### Backend (Render)
+
+- Create a Web Service from `server/`
+- Use Node version 22 (or LTS compatible)
+- Build command: `npm install`
+- Start command: `node src/server.js`
+- Environment Variables:
+  - `PORT` → Render provides a port, but we default to 10000 in `render.yaml` (Render sets PORT at runtime; our server respects `process.env.PORT`).
+  - `CLIENT_ORIGIN` → https://your-frontend.vercel.app
+  - `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_*` as required
+
+## Notes
+
+- The client and Socket.IO use `VITE_API_BASE_URL` for API and socket connection.
+- The server allows CORS for `CLIENT_ORIGIN`. In dev it also allows localhost:5173/5174.
+- Real-time events: client joins a room named by the user’s ID on connect.
 # PixelChat: Real-Time Chat Application
 
 ![PixelChat Chat Interface](https://i.imgur.com/your-screenshot-url.png)
