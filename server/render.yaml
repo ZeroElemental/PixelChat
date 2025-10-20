@@ -4,6 +4,7 @@ services:
     name: pixelchat-backend
     env: node
     plan: free
+    rootDir: server
     buildCommand: npm install
     startCommand: node src/server.js
     envVars:
