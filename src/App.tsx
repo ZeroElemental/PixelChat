@@ -13,12 +13,18 @@ import NavBar from "./components/NavBar";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Home />,
+    element: (
+      <>
+        <NavBar />
+        <Home />
+      </>
+    ),
   },
   {
     path: "/chat",
     element: (
       <ProtectedRoute>
+        <NavBar />
         <ChatPage />
       </ProtectedRoute>
     ),
@@ -40,7 +46,7 @@ const router = createBrowserRouter([
 function App() {
   return (
     <>
-      <NavBar />
+      
       <RouterProvider router={router} />
       <Toaster richColors />
     </>
