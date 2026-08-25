@@ -33,3 +33,16 @@ export const ATTACHMENT_MIME = [
   'text/plain',
   'application/zip',
 ] as const
+
+/**
+ * `next` arrives from the query string, so it must never be trusted as a
+ * redirect target: an absolute URL there is an open redirect off the site.
+ * Only same-origin absolute paths are allowed through.
+ */
+export function safeRedirectPath(value: unknown, fallback = '/chat'): string {
+  if (typeof value !== 'string') return fallback
+  // Browsers treat both '//evil.com' and '/\evil.com' as scheme-relative URLs,
+  // so a leading slash alone is not enough to prove the target is same-origin.
+  if (!/^\/(?![/\\])/.test(value)) return fallback
+  return value
+}

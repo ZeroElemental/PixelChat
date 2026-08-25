@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { signInSchema, signUpSchema } from '@/lib/validation'
+import { safeRedirectPath, signInSchema, signUpSchema } from '@/lib/validation'
 
 export type AuthState = { error?: string; notice?: string }
 
@@ -20,7 +20,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   if (error) return { error: 'Invalid email or password' }
 
   revalidatePath('/', 'layout')
-  redirect(String(formData.get('next') || '/chat'))
+  redirect(safeRedirectPath(formData.get('next')))
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {

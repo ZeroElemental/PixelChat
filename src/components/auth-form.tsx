@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useActionState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { signIn, signUp, type AuthState } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,13 +10,12 @@ import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
 } from '@/components/ui/card'
 
-export function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
+export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: string }) {
   const isSignUp = mode === 'signup'
   const [state, action, pending] = useActionState<AuthState, FormData>(
     isSignUp ? signUp : signIn,
     {},
   )
-  const next = useSearchParams().get('next') ?? '/chat'
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
