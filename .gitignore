@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local screenshots and scratch captures, never published
+/Pics/
+/pics/
+/.playwright-mcp/
+/cp[0-9]-*.png
+/responsive-*.png
