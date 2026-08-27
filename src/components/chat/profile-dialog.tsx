@@ -1,0 +1,203 @@
+'use client'
+
+import { useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog'
+import { AVATAR_MAX_BYTES, AVATAR_MIME, usernameSchema } from '@/lib/validation'
+
+type Props = {
+  me: string
+  username: string
+  avatarUrl: string | null
+  onSaved: (next: { username: string; avatarUrl: string | null }) => void
+}
+
+export function ProfileDialog({ me, username, avatarUrl, onSaved }: Props) {
+  const [open, setOpen] = useState(false)
+  const [draftName, setDraftName] = useState(username)
+  const [preview, setPreview] = useState(avatarUrl)
+  const [pending, setPending] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function uploadAvatar(file: File) {
+    // The bucket enforces both of these too; checking here just avoids a
+    // pointless upload and gives a better message.
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error('Avatars must be 2 MB or smaller')
+      return
+    }
+    if (!(AVATAR_MIME as readonly string[]).includes(file.type)) {
+      toast.error('Use a PNG, JPEG or WebP image')
+      return
+    }
+
+    setPending(true)
+    const supabase = createClient()
+    const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
+    // Storage policies check the first path segment against auth.uid().
+    const path = `${me}/${crypto.randomUUID()}.${ext}`
+
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { contentType: file.type, upsert: true })
+    setPending(false)
+
+    if (error) {
+      toast.error('Upload failed')
+      return
+    }
+    // Public bucket, so this URL is stable and needs no re-signing.
+    setPreview(supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl)
+  }
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault()
+    const name = draftName.trim()
+
+    const parsed = usernameSchema.safeParse(name)
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message)
+      return
+    }
+
+    setPending(true)
+    const supabase = createClient()
+
+    // A case-only rename collides with the caller's own row under the
+    // lower(username) unique index, so username_available would wrongly say no.
+    // The update itself is fine -- a row never conflicts with itself.
+    if (parsed.data.toLowerCase() !== username.toLowerCase()) {
+      const { data: available } = await supabase.rpc('username_available', {
+        candidate: parsed.data,
+      })
+      if (!available) {
+        setPending(false)
+        toast.error('That username is taken')
+        return
+      }
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: parsed.data, avatar_url: preview })
+      .eq('id', me)
+    setPending(false)
+
+    if (error) {
+      toast.error(error.code === '23505' ? 'That username is taken' : 'Could not save')
+      return
+    }
+
+    onSaved({ username: parsed.data, avatarUrl: preview })
+    toast.success('Profile updated')
+    setOpen(false)
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Opening should show what is actually stored, not a stale draft from a
+        // previous cancel. This is an event, not state to synchronize.
+        if (next) {
+          setDraftName(username)
+          setPreview(avatarUrl)
+        }
+        setOpen(next)
+      }}
+    >
+      <DialogTrigger asChild>
+        <button
+          className="flex min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted/50"
+          aria-label="Edit your profile"
+        >
+          <Avatar className="h-7 w-7 shrink-0">
+            {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+              {username.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="truncate font-semibold">{username}</span>
+        </button>
+      </DialogTrigger>
+
+      <DialogContent>
+        <form onSubmit={save}>
+          <DialogHeader>
+            <DialogTitle>Your profile</DialogTitle>
+            <DialogDescription>
+              Your username is how friends find you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                {preview && <AvatarImage src={preview} alt="" />}
+                <AvatarFallback className="bg-primary text-xl text-primary-foreground">
+                  {(draftName || username).charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                accept={AVATAR_MIME.join(',')}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (file) void uploadAvatar(file)
+                }}
+              />
+              <span className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  Change photo
+                </Button>
+                {preview && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => setPreview(null)}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="profile-username">Username</Label>
+              <Input
+                id="profile-username"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                pattern="[A-Za-z0-9_]{3,24}"
+                required
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="submit" disabled={pending || !draftName.trim()}>
+              {pending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

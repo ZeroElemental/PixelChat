@@ -14,7 +14,7 @@ export default async function ChatPage() {
 
   const [conversations, profile, pending] = await Promise.all([
     supabase.rpc('my_conversations'),
-    supabase.from('profiles').select('username').eq('id', me).single(),
+    supabase.from('profiles').select('username, avatar_url').eq('id', me).single(),
     supabase
       .from('friendships')
       .select('requester_id, profiles!friendships_requester_id_fkey(username)')
@@ -31,6 +31,7 @@ export default async function ChatPage() {
     <ChatShell
       me={me}
       username={profile.data?.username ?? ''}
+      avatarUrl={profile.data?.avatar_url ?? null}
       initialConversations={conversations.data ?? []}
       initialRequests={requests}
     />
