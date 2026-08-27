@@ -4,10 +4,24 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Pixel UI: nothing is rounded. Kept as named steps so utilities still
+     resolve, but every step is square on purpose. */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /* Identity only -- headings, wordmark, control labels. Never running text. */
+  --font-display: var(--font-silkscreen), var(--font-plex-sans), sans-serif;
+
+  /* The defining pixel-UI texture: offset, zero-blur, no spread. */
+  --shadow-pixel-sm: 2px 2px 0 0 var(--border);
+  --shadow-pixel: 4px 4px 0 0 var(--border);
+  --shadow-pixel-lg: 6px 6px 0 0 var(--border);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -23,91 +37,71 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-presence: var(--presence);
+  --color-link: var(--link);
 }
 
+/* Light: paper and ink. Dark ink borders do the structural work, which is why
+   the bright primary still reads against a pale ground. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.25);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.25);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.25);
-  --primary: oklch(0.216 0.006 56.043);
-  --primary-foreground: oklch(0.985 0.001 106.423);
-  --secondary: oklch(0.97 0.001 106.424);
-  --secondary-foreground: oklch(0.216 0.006 56.043);
-  --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
-  --accent: oklch(0.97 0.001 106.424);
-  --accent-foreground: oklch(0.216 0.006 56.043);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.923 0.003 48.717);
-  --input: oklch(0.923 0.003 48.717);
-  --ring: oklch(0.709 0.01 56.259);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0.001 106.423);
-  --sidebar-foreground: oklch(0.147 0.004 49.25);
-  --sidebar-primary: oklch(0.216 0.006 56.043);
-  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.97 0.001 106.424);
-  --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
-  --sidebar-border: oklch(0.923 0.003 48.717);
-  --sidebar-ring: oklch(0.709 0.01 56.259);
+  --radius: 0px;
+  --background: oklch(0.968 0.008 95);
+  --foreground: oklch(0.185 0.012 160);
+  --card: oklch(0.995 0.004 95);
+  --card-foreground: oklch(0.185 0.012 160);
+  --popover: oklch(0.995 0.004 95);
+  --popover-foreground: oklch(0.185 0.012 160);
+  --primary: oklch(0.756 0.164 164);
+  --primary-foreground: oklch(0.165 0.014 160);
+  --secondary: oklch(0.795 0.142 76);
+  --secondary-foreground: oklch(0.185 0.012 160);
+  --muted: oklch(0.925 0.010 95);
+  --muted-foreground: oklch(0.438 0.018 160);
+  --accent: oklch(0.795 0.142 76);
+  --accent-foreground: oklch(0.185 0.012 160);
+  --destructive: oklch(0.548 0.208 27);
+  --destructive-foreground: oklch(0.985 0.004 95);
+  --border: oklch(0.185 0.012 160);
+  --input: oklch(0.185 0.012 160);
+  --ring: oklch(0.545 0.152 164);
+  --presence: oklch(0.618 0.176 148);
+  /* Bright phosphor works as a button fill with dark text, but fails as text
+     on a pale ground -- links get their own, darker green. */
+  --link: oklch(0.515 0.132 164);
+  --grid: oklch(0.185 0.012 160 / 7%);
+  --dust: oklch(0.515 0.132 164 / 30%);
 }
 
+/* Dark: phosphor on a CRT. The ground carries a trace of green rather than
+   being neutral black. */
 .dark {
-  --background: oklch(0.147 0.004 49.25);
-  --foreground: oklch(0.985 0.001 106.423);
-  --card: oklch(0.216 0.006 56.043);
-  --card-foreground: oklch(0.985 0.001 106.423);
-  --popover: oklch(0.216 0.006 56.043);
-  --popover-foreground: oklch(0.985 0.001 106.423);
-  --primary: oklch(0.923 0.003 48.717);
-  --primary-foreground: oklch(0.216 0.006 56.043);
-  --secondary: oklch(0.268 0.007 34.298);
-  --secondary-foreground: oklch(0.985 0.001 106.423);
-  --muted: oklch(0.268 0.007 34.298);
-  --muted-foreground: oklch(0.709 0.01 56.259);
-  --accent: oklch(0.268 0.007 34.298);
-  --accent-foreground: oklch(0.985 0.001 106.423);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.553 0.013 58.071);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.216 0.006 56.043);
-  --sidebar-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.268 0.007 34.298);
-  --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.553 0.013 58.071);
+  --background: oklch(0.168 0.014 162);
+  --foreground: oklch(0.948 0.022 160);
+  --card: oklch(0.212 0.016 162);
+  --card-foreground: oklch(0.948 0.022 160);
+  --popover: oklch(0.212 0.016 162);
+  --popover-foreground: oklch(0.948 0.022 160);
+  --primary: oklch(0.812 0.171 165);
+  --primary-foreground: oklch(0.162 0.018 162);
+  --secondary: oklch(0.812 0.148 76);
+  --secondary-foreground: oklch(0.162 0.018 162);
+  --muted: oklch(0.272 0.018 162);
+  --muted-foreground: oklch(0.735 0.032 160);
+  --accent: oklch(0.812 0.148 76);
+  --accent-foreground: oklch(0.162 0.018 162);
+  --destructive: oklch(0.672 0.198 25);
+  --destructive-foreground: oklch(0.162 0.018 162);
+  --border: oklch(0.432 0.038 162);
+  --input: oklch(0.432 0.038 162);
+  --ring: oklch(0.812 0.171 165);
+  --presence: oklch(0.822 0.191 146);
+  --link: oklch(0.812 0.171 165);
+  --grid: oklch(0.812 0.171 165 / 8%);
+  --dust: oklch(0.812 0.171 165 / 42%);
 }
 
 @layer base {
@@ -115,6 +109,119 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground;
+  }
+  /* Crisp edges are the whole point; never let a browser smooth pixel art. */
+  img[data-pixel] {
+    image-rendering: pixelated;
+  }
+}
+
+/* Animated backdrop: a drifting pixel grid with two layers of rising dust.
+   Pure CSS -- no canvas, no rAF, no dependency. Sits behind content via a
+   negative z-index, which still paints above the body background. */
+.pixel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: grid-drift 24s linear infinite;
+}
+
+/* Each layer is one 2px square plus a list of box-shadow clones. Positions are
+   duplicated at +100vh so translating a full viewport loops seamlessly. */
+.pixel-backdrop > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+}
+
+.pixel-backdrop > span:first-child {
+  box-shadow:
+    4vw 6vh var(--dust), 17vw 23vh var(--dust), 29vw 51vh var(--dust),
+    41vw 12vh var(--dust), 53vw 68vh var(--dust), 66vw 34vh var(--dust),
+    78vw 81vh var(--dust), 88vw 19vh var(--dust), 9vw 44vh var(--dust),
+    35vw 88vh var(--dust), 60vw 95vh var(--dust), 94vw 57vh var(--dust),
+    4vw 106vh var(--dust), 17vw 123vh var(--dust), 29vw 151vh var(--dust),
+    41vw 112vh var(--dust), 53vw 168vh var(--dust), 66vw 134vh var(--dust),
+    78vw 181vh var(--dust), 88vw 119vh var(--dust), 9vw 144vh var(--dust),
+    35vw 188vh var(--dust), 60vw 195vh var(--dust), 94vw 157vh var(--dust);
+  animation: dust-rise 46s linear infinite;
+}
+
+.pixel-backdrop > span:last-child {
+  width: 3px;
+  height: 3px;
+  box-shadow:
+    11vw 15vh var(--dust), 24vw 62vh var(--dust), 38vw 39vh var(--dust),
+    49vw 84vh var(--dust), 58vw 8vh var(--dust), 71vw 47vh var(--dust),
+    83vw 71vh var(--dust), 96vw 28vh var(--dust), 15vw 77vh var(--dust),
+    44vw 55vh var(--dust), 68vw 92vh var(--dust), 90vw 3vh var(--dust),
+    11vw 115vh var(--dust), 24vw 162vh var(--dust), 38vw 139vh var(--dust),
+    49vw 184vh var(--dust), 58vw 108vh var(--dust), 71vw 147vh var(--dust),
+    83vw 171vh var(--dust), 96vw 128vh var(--dust), 15vw 177vh var(--dust),
+    44vw 155vh var(--dust), 68vw 192vh var(--dust), 90vw 103vh var(--dust);
+  animation: dust-rise 29s linear infinite;
+}
+
+@keyframes grid-drift {
+  to {
+    background-position: 32px 32px;
+  }
+}
+
+@keyframes dust-rise {
+  to {
+    transform: translateY(-100vh);
+  }
+}
+
+/* Typing indicator -- three blocks pulsing in sequence. Stepped, not eased:
+   pixel UI shouldn't fade smoothly. */
+.pixel-typing {
+  display: inline-flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pixel-typing > span {
+  width: 10px;
+  height: 10px;
+  background: var(--primary);
+  animation: typing-blink 1.2s steps(1, end) infinite;
+}
+
+.pixel-typing > span:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.pixel-typing > span:nth-child(3) {
+  animation-delay: 0.8s;
+}
+
+@keyframes typing-blink {
+  0%,
+  33% {
+    opacity: 1;
+  }
+  34%,
+  100% {
+    opacity: 0.22;
+  }
+}
+
+/* Motion is decoration here; nothing is communicated by it. */
+@media (prefers-reduced-motion: reduce) {
+  .pixel-backdrop,
+  .pixel-backdrop > span,
+  .pixel-typing > span {
+    animation: none;
   }
 }

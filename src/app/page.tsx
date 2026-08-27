@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { PixelBackdrop } from '@/components/pixel-backdrop'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 
@@ -9,14 +10,21 @@ export default async function Home() {
   if (data?.claims) redirect('/chat')
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
-      <div className="max-w-2xl space-y-6 text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">PixelChat</h1>
-        <p className="text-muted-foreground">
+    // No bg-* here: the body background plus the backdrop show through.
+    <main className="flex min-h-screen items-center justify-center p-6 text-foreground">
+      <PixelBackdrop />
+      <div className="max-w-2xl space-y-8 text-center">
+        <span className="pixel-typing" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        <h1 className="font-display text-3xl tracking-tight md:text-5xl">PixelChat</h1>
+        <p className="mx-auto max-w-md text-muted-foreground">
           Fast, simple, and modern chat. Connect with friends, share files, and stay
           in sync in real time.
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-4">
           <Button asChild size="lg"><Link href="/login">Login</Link></Button>
           <Button asChild size="lg" variant="secondary"><Link href="/signup">Sign Up</Link></Button>
         </div>

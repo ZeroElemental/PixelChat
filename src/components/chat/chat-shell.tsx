@@ -448,7 +448,7 @@ export function ChatShell({
                   </AvatarFallback>
                 </Avatar>
                 {onlineIds.has(conversation.other_id) && (
-                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-presence ring-2 ring-background" />
                 )}
               </span>
               <span className="min-w-0 flex-1">
