@@ -115,6 +115,18 @@
   img[data-pixel] {
     image-rendering: pixelated;
   }
+  /* Tailwind v4 dropped the opinionated cursor: pointer on buttons, so every
+     control fell back to the arrow. One rule here beats cursor-pointer sprayed
+     across each component, and it reaches Radix triggers too. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  summary {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 /* Animated backdrop: a drifting pixel grid with two layers of rising dust.

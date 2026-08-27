@@ -397,8 +397,15 @@ export function ChatShell({
   // --- render ---------------------------------------------------------------
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <aside className="flex w-72 shrink-0 flex-col border-r-2">
+    <div className="flex h-dvh bg-background text-foreground">
+      {/* One pane at a time below md: the list, or the open thread. Side by side
+          from md up. A fixed 288px rail leaves no room for messages on a phone. */}
+      <aside
+        className={[
+          active ? 'hidden md:flex' : 'flex',
+          'w-full shrink-0 flex-col border-r-2 md:w-72',
+        ].join(' ')}
+      >
         <header className="flex items-center justify-between border-b-2 px-3 py-3">
           <ProfileDialog
             me={me}
@@ -485,9 +492,10 @@ export function ChatShell({
           onUpload={upload}
           onTyping={setTyping}
           onLoadOlder={loadOlder}
+          onBack={() => setActiveId(null)}
         />
       ) : (
-        <section className="flex flex-1 items-center justify-center">
+        <section className="hidden flex-1 items-center justify-center md:flex">
           <p className="text-muted-foreground">Pick a conversation to start chatting.</p>
         </section>
       )}
