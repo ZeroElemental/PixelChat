@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { signIn, signUp, type AuthState } from '@/app/auth/actions'
+import { PixelBackdrop } from '@/components/pixel-backdrop'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,10 +19,11 @@ export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: stri
   )
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <PixelBackdrop />
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">
+          <CardTitle className="font-display text-xl">
             {isSignUp ? 'Create an account' : 'Welcome back'}
           </CardTitle>
           <CardDescription>
@@ -76,7 +78,7 @@ export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: stri
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Link
                 href={isSignUp ? '/login' : '/signup'}
-                className="text-primary hover:underline"
+                className="text-link hover:underline"
               >
                 {isSignUp ? 'Login' : 'Sign Up'}
               </Link>
