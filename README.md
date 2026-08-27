@@ -36,6 +36,10 @@ subject to the same checks:
   never write to it; only a definer-rights trigger publishes there.
 - **Attachments are private.** Object paths are `<conversation_id>/<file>` and
   storage policies re-check membership when a signed URL is minted.
+- **Avatars are public, deliberately.** `profiles` is readable by every signed-in
+  user, so an `avatar_url` is already visible to anyone who could see the image.
+  A public bucket buys stable, cacheable URLs instead of signing one per render;
+  writes are still restricted to `<your own id>/<file>`.
 - **`anon` has no table privileges at all.** Signed out, nothing is readable.
 
 `supabase/tests/rls_test.sql` asserts all of this. It seeds its own users, runs
@@ -107,9 +111,12 @@ automatically, and its default privileges hand `ALL` to `anon` and
 as the Site URL and `https://<project>-*.vercel.app/**` as a redirect URL so
 preview deployments can complete sign-in.
 
-Email confirmation uses Supabase's built-in SMTP, which is rate limited to a
-handful of messages per hour and is not suitable for production. Configure a
-real SMTP provider before launch, or turn confirmation off deliberately.
+Email confirmation is turned **off** deliberately, under Authentication →
+Providers → Email. Supabase's built-in SMTP is rate limited to a handful of
+messages per hour, so leaving confirmation on would silently break signups once
+more than a few people tried in the same hour. `signUp` already handles both
+paths (`src/app/auth/actions.ts`), so re-enabling it only requires configuring a
+real SMTP provider first — nothing in the app needs to change.
 
 ## Project layout
 
@@ -120,7 +127,8 @@ src/
     chat/            the authenticated chat page (server-rendered shell)
     login, signup    auth pages
   components/
-    chat/            chat shell, thread, attachments, friends
+    chat/            chat shell, thread, attachments, friends, profile
+    theme-toggle.tsx light/dark switch
     ui/              shadcn primitives
   lib/
     supabase/        browser and server client factories, generated types
@@ -128,6 +136,6 @@ src/
   proxy.ts           session refresh and route gating (Next 16 renamed
                      middleware.ts to proxy.ts)
 supabase/
-  migrations/        schema, RLS policies, triggers, functions
+  migrations/        schema, RLS policies, triggers, functions, storage buckets
   tests/rls_test.sql security regression test
 ```

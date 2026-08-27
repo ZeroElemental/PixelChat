@@ -6,10 +6,12 @@ import { toast } from 'sonner'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { signOut } from '@/app/auth/actions'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { MessageThread } from './message-thread'
 import { AddFriendDialog, FriendRequests } from './friends'
+import { ProfileDialog } from './profile-dialog'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
 import { usernameSchema } from '@/lib/validation'
 
@@ -18,6 +20,7 @@ const PAGE_SIZE = 50
 type Props = {
   me: string
   username: string
+  avatarUrl: string | null
   initialConversations: Conversation[]
   initialRequests: FriendRequest[]
 }
@@ -25,10 +28,14 @@ type Props = {
 export function ChatShell({
   me,
   username,
+  avatarUrl,
   initialConversations,
   initialRequests,
 }: Props) {
   const supabase = useMemo(() => createClient(), [])
+
+  // Editable in the profile dialog, so it outgrows the server-rendered prop.
+  const [profile, setProfile] = useState({ username, avatarUrl })
 
   const [conversations, setConversations] = useState(initialConversations)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -332,25 +339,25 @@ export function ChatShell({
       toast.error(parsed.error.issues[0].message)
       return false
     }
-    if (parsed.data.toLowerCase() === username.toLowerCase()) {
+    if (parsed.data.toLowerCase() === profile.username.toLowerCase()) {
       toast.error("You can't add yourself")
       return false
     }
 
-    const { data: profile } = await supabase
+    const { data: target } = await supabase
       .from('profiles')
       .select('id')
       .ilike('username', parsed.data)
       .maybeSingle()
 
-    if (!profile) {
+    if (!target) {
       toast.error('No user with that username')
       return false
     }
 
     const { error } = await supabase
       .from('friendships')
-      .insert({ requester_id: me, addressee_id: profile.id, status: 'pending' })
+      .insert({ requester_id: me, addressee_id: target.id, status: 'pending' })
 
     if (error) {
       // The pair-unique index covers requests in either direction.
@@ -393,7 +400,12 @@ export function ChatShell({
     <div className="flex h-screen bg-background text-foreground">
       <aside className="flex w-72 shrink-0 flex-col border-r">
         <header className="flex items-center justify-between border-b px-3 py-3">
-          <span className="truncate font-semibold">{username}</span>
+          <ProfileDialog
+            me={me}
+            username={profile.username}
+            avatarUrl={profile.avatarUrl}
+            onSaved={setProfile}
+          />
           <span className="flex items-center">
             <AddFriendDialog onAdd={addFriend} />
             <FriendRequests
@@ -401,6 +413,7 @@ export function ChatShell({
               onAccept={acceptRequest}
               onReject={rejectRequest}
             />
+            <ThemeToggle />
             <form action={signOut}>
               <Button type="submit" variant="ghost" size="icon" aria-label="Log out">
                 <LogOut className="h-4 w-4" />
@@ -427,6 +440,9 @@ export function ChatShell({
             >
               <span className="relative shrink-0">
                 <Avatar className="h-9 w-9">
+                  {conversation.other_avatar_url && (
+                    <AvatarImage src={conversation.other_avatar_url} alt="" />
+                  )}
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {conversation.other_username.charAt(0).toUpperCase()}
                   </AvatarFallback>

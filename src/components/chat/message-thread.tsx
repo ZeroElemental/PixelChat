@@ -5,7 +5,7 @@ import { Paperclip, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Attachment } from './attachment'
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIME } from '@/lib/validation'
 import type { Conversation, Message } from '@/lib/types'
@@ -78,6 +78,9 @@ export function MessageThread({
     <section className="flex min-w-0 flex-1 flex-col">
       <header className="flex items-center gap-3 border-b px-4 py-3">
         <Avatar className="h-9 w-9">
+          {conversation.other_avatar_url && (
+            <AvatarImage src={conversation.other_avatar_url} alt="" />
+          )}
           <AvatarFallback className="bg-primary text-primary-foreground">
             {conversation.other_username.charAt(0).toUpperCase()}
           </AvatarFallback>

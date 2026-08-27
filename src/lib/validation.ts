@@ -34,6 +34,9 @@ export const ATTACHMENT_MIME = [
   'application/zip',
 ] as const
 
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+export const AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'] as const
+
 /**
  * `next` arrives from the query string, so it must never be trusted as a
  * redirect target: an absolute URL there is an open redirect off the site.
