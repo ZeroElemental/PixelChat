@@ -41,9 +41,11 @@ export function ProfileDialog({ me, username, avatarUrl, onSaved }: Props) {
 
     setPending(true)
     const supabase = createClient()
-    const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
-    // Storage policies check the first path segment against auth.uid().
-    const path = `${me}/${crypto.randomUUID()}.${ext}`
+    // One fixed object per user, overwritten in place. Storage policies check the
+    // first path segment against auth.uid(). A unique path per upload would leave
+    // the previous avatar orphaned in the bucket on every change; the extension is
+    // omitted because Storage serves the content type it was uploaded with.
+    const path = `${me}/avatar`
 
     const { error } = await supabase.storage
       .from('avatars')
@@ -54,8 +56,10 @@ export function ProfileDialog({ me, username, avatarUrl, onSaved }: Props) {
       toast.error('Upload failed')
       return
     }
-    // Public bucket, so this URL is stable and needs no re-signing.
-    setPreview(supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl)
+    // Public bucket, so the URL is stable and needs no re-signing -- which is
+    // exactly why it needs a cache buster once the path stops changing.
+    const { publicUrl } = supabase.storage.from('avatars').getPublicUrl(path).data
+    setPreview(`${publicUrl}?v=${Date.now()}`)
   }
 
   async function save(event: React.FormEvent) {
