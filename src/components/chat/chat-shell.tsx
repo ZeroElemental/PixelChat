@@ -398,8 +398,8 @@ export function ChatShell({
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      <aside className="flex w-72 shrink-0 flex-col border-r">
-        <header className="flex items-center justify-between border-b px-3 py-3">
+      <aside className="flex w-72 shrink-0 flex-col border-r-2">
+        <header className="flex items-center justify-between border-b-2 px-3 py-3">
           <ProfileDialog
             me={me}
             username={profile.username}
@@ -434,8 +434,10 @@ export function ChatShell({
               onClick={() => openConversation(conversation.conversation_id)}
               aria-current={conversation.conversation_id === activeId}
               className={[
-                'flex w-full items-center gap-3 rounded-lg p-2 text-left',
-                conversation.conversation_id === activeId ? 'bg-muted' : 'hover:bg-muted/50',
+                'flex w-full items-center gap-3 border-2 p-2 text-left transition-colors',
+                conversation.conversation_id === activeId
+                  ? 'border-border bg-muted'
+                  : 'border-transparent hover:border-border hover:bg-muted/50',
               ].join(' ')}
             >
               <span className="relative shrink-0">
@@ -448,7 +450,7 @@ export function ChatShell({
                   </AvatarFallback>
                 </Avatar>
                 {onlineIds.has(conversation.other_id) && (
-                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-presence ring-2 ring-background" />
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-presence ring-2 ring-background" />
                 )}
               </span>
               <span className="min-w-0 flex-1">
@@ -462,7 +464,7 @@ export function ChatShell({
                 </span>
               </span>
               {conversation.unread_count > 0 && (
-                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                <span className="shrink-0 border-2 border-border bg-primary px-2 py-0.5 font-mono text-xs text-primary-foreground">
                   {conversation.unread_count}
                 </span>
               )}

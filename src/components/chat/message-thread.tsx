@@ -76,7 +76,7 @@ export function MessageThread({
 
   return (
     <section className="flex min-w-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-b px-4 py-3">
+      <header className="flex items-center gap-3 border-b-2 px-4 py-3">
         <Avatar className="h-9 w-9">
           {conversation.other_avatar_url && (
             <AvatarImage src={conversation.other_avatar_url} alt="" />
@@ -108,7 +108,7 @@ export function MessageThread({
             <div key={message.id} className={mine ? 'flex justify-end' : 'flex justify-start'}>
               <div
                 className={[
-                  'max-w-[75%] rounded-lg px-3 py-2 text-sm',
+                  'max-w-[75%] border-2 border-border px-3 py-2 text-sm shadow-pixel-sm',
                   mine ? 'bg-primary text-primary-foreground' : 'bg-muted',
                 ].join(' ')}
               >
@@ -117,7 +117,7 @@ export function MessageThread({
                   : <Attachment message={message} />}
                 <time
                   dateTime={message.created_at}
-                  className="mt-1 block text-[10px] opacity-60"
+                  className="mt-1 block font-mono text-[10px] opacity-80"
                 >
                   {new Date(message.created_at).toLocaleTimeString([], {
                     hour: '2-digit',
@@ -137,7 +137,7 @@ export function MessageThread({
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={submit} className="flex items-center gap-2 border-t p-3">
+      <form onSubmit={submit} className="flex items-center gap-2 border-t-2 p-3">
         <input
           ref={fileRef}
           type="file"

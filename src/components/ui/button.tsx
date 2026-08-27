@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
  * change alone still signals the press.
  */
 const pixelSurface =
-  "border-2 border-border shadow-pixel-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none motion-reduce:active:translate-x-0 motion-reduce:active:translate-y-0"
+  "border-2 border-border shadow-pixel-sm hover:-translate-x-px hover:-translate-y-px hover:shadow-pixel active:translate-x-[2px] active:translate-y-[2px] active:shadow-none motion-reduce:hover:translate-x-0 motion-reduce:hover:translate-y-0 motion-reduce:active:translate-x-0 motion-reduce:active:translate-y-0"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-invalid:border-destructive",
