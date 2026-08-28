@@ -4,27 +4,29 @@
 -- A security definer function is the way in, the same shape accept_friend_-
 -- request() already uses.
 --
--- The order of the four steps is the whole point:
+-- Two steps, and the order matters:
 --
---   1. attachments   -- messages.attachment_path is the only record of which
---                       objects were this user's, and messages.sender_id
---                       cascades, so the pointers must be read before step 4.
---   2. avatars       -- keyed on the '<user_id>/' path prefix.
---   3. conversations -- 20260825133149_reap_orphan_conversations.sql reaps on
+--   1. conversations -- 20260825133149_reap_orphan_conversations.sql reaps on
 --                       count = 0, so a two-person DM losing one member would
 --                       leave the conversation, the peer's membership and the
 --                       peer's messages behind, reachable by nobody. Deleting
 --                       the conversation outright cascades all three. Correct
 --                       because conversations here are always one-to-one.
---   4. auth.users    -- cascades profiles -> members, messages, friendships.
+--   2. auth.users    -- cascades profiles -> members, messages, friendships.
 --
--- ponytail: steps 1 and 2 delete the storage.objects rows, which is what makes
--- the database consistent, but the underlying bytes stay in the bucket -- there
--- is no delete policy on attachments (they are immutable by design) and no
--- service role to call the storage API with. The client removes its own avatar
--- bytes before calling this, which avatars_delete_own already permits. If
--- orphaned attachment bytes ever matter, that is a scheduled job or an edge
--- function with the service key, not this function.
+-- Storage is deliberately not touched here. Supabase installs a
+-- storage.protect_delete() trigger that rejects any direct delete from
+-- storage.objects -- 'Use the Storage API instead' -- so even the owner of this
+-- function cannot clear those rows, and trying raises 42501 and aborts the whole
+-- deletion. The client removes its own avatar through the Storage API before
+-- calling this, which avatars_delete_own already permits and which deletes the
+-- bytes properly.
+--
+-- ponytail: that leaves message attachments orphaned in the bucket. There is no
+-- delete policy on attachments (immutable by design, see
+-- 20260825124623_storage_attachments.sql) and no service role to bypass it with,
+-- so nothing here can reach them. If orphaned attachment bytes ever cost enough
+-- to matter, that is an edge function holding the service key, not this.
 create or replace function public.delete_own_account()
 returns void language plpgsql security definer set search_path = '' as $$
 declare
@@ -33,17 +35,6 @@ begin
   if me is null then
     raise exception 'not authenticated' using errcode = '42501';
   end if;
-
-  delete from storage.objects
-   where bucket_id = 'attachments'
-     and name in (
-       select m.attachment_path from public.messages m
-        where m.sender_id = me and m.attachment_path is not null
-     );
-
-  delete from storage.objects
-   where bucket_id = 'avatars'
-     and (storage.foldername(name))[1] = me::text;
 
   delete from public.conversations c
    where exists (

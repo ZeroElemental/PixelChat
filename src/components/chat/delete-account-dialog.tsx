@@ -28,9 +28,11 @@ export function DeleteAccountDialog({ me, username, open, onOpenChange }: Props)
     setPending(true)
     const supabase = createClient()
 
-    // Remove the avatar bytes first, while the session still exists: this is the
-    // one object the client is allowed to delete for real (avatars_delete_own),
-    // and the RPC can only clear the storage.objects row, not the file.
+    // Remove the avatar bytes first, while the session still exists. This has to
+    // happen out here: Supabase's storage.protect_delete() trigger rejects any
+    // direct delete from storage.objects, so the RPC cannot touch storage at all
+    // -- only the Storage API can, and only where a policy allows it, which
+    // avatars_delete_own does.
     const { data: files } = await supabase.storage.from('avatars').list(me)
     if (files?.length) {
       await supabase.storage.from('avatars').remove(files.map((f) => `${me}/${f.name}`))

@@ -128,6 +128,10 @@ begin
 
   -- ---- account deletion --------------------------------------------------
   -- Runs last: it destroys the fixtures the assertions above rely on.
+  -- This caught a real one: the first version of delete_own_account() also
+  -- cleared the caller's storage.objects rows, which Supabase's
+  -- storage.protect_delete() trigger rejects outright -- 42501, aborting the
+  -- whole deletion. Storage is the client's job now, through the Storage API.
   execute 'set local role authenticated';
   execute format('set local request.jwt.claims = %L',
                  json_build_object('sub', alice, 'role', 'authenticated')::text);
