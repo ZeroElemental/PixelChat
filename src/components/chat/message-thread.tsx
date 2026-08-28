@@ -8,7 +8,45 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Attachment } from './attachment'
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIME } from '@/lib/validation'
+import { motionReduced } from '@/lib/prefs'
 import type { Conversation, Message } from '@/lib/types'
+
+const MAX_PIXELS = 24
+
+// One offscreen context for the life of the module. measureText against the
+// input's own computed font gives the caret's x without a mirror element and
+// without forcing a layout on every keystroke.
+let ruler: CanvasRenderingContext2D | null = null
+
+/** Throws a couple of pixels off the caret. Purely decorative. */
+function emitPixels(
+  input: HTMLInputElement | null,
+  host: HTMLSpanElement | null,
+  value: string,
+) {
+  // Bail here, not only in CSS: with `animation: none` the animationend event
+  // never fires, so the nodes would pile up forever.
+  if (!input || !host || motionReduced()) return
+  if (host.childElementCount >= MAX_PIXELS) return
+
+  ruler ??= document.createElement('canvas').getContext('2d')
+  if (!ruler) return
+
+  const style = getComputedStyle(input)
+  ruler.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+  const padding = parseFloat(style.paddingLeft) || 0
+  const x = Math.min(padding + ruler.measureText(value).width, input.clientWidth - 4)
+
+  for (let i = 0; i < 2; i++) {
+    const pixel = document.createElement('i')
+    pixel.style.left = `${x}px`
+    pixel.style.top = '50%'
+    pixel.style.setProperty('--dx', `${(Math.random() - 0.4) * 26}px`)
+    pixel.style.setProperty('--dy', `${-10 - Math.random() * 22}px`)
+    pixel.addEventListener('animationend', () => pixel.remove(), { once: true })
+    host.append(pixel)
+  }
+}
 
 type Props = {
   me: string
@@ -32,6 +70,8 @@ export function MessageThread({
   const [draft, setDraft] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const burstRef = useRef<HTMLSpanElement>(null)
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -43,6 +83,7 @@ export function MessageThread({
   }, [])
 
   function handleDraft(value: string) {
+    if (value.length > draft.length) emitPixels(inputRef.current, burstRef.current, value)
     setDraft(value)
     onTyping(true)
     if (typingTimeout.current) clearTimeout(typingTimeout.current)
@@ -166,13 +207,19 @@ export function MessageThread({
         >
           <Paperclip className="h-4 w-4" />
         </Button>
-        <Input
-          value={draft}
-          onChange={(e) => handleDraft(e.target.value)}
-          placeholder={`Message ${conversation.other_username}`}
-          maxLength={4000}
-          aria-label="Message"
-        />
+        <span className="relative flex flex-1">
+          <Input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => handleDraft(e.target.value)}
+            placeholder={`Message ${conversation.other_username}`}
+            maxLength={4000}
+            aria-label="Message"
+          />
+          {/* Where the burst spawns. Decorative, so it takes no pointer events
+              and is hidden from assistive tech. */}
+          <span ref={burstRef} className="pixel-burst" aria-hidden="true" />
+        </span>
         <Button type="submit" size="icon" aria-label="Send" disabled={!draft.trim()}>
           <Send className="h-4 w-4" />
         </Button>

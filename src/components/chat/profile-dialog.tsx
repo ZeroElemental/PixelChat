@@ -18,10 +18,56 @@ type Props = {
   username: string
   avatarUrl: string | null
   onSaved: (next: { username: string; avatarUrl: string | null }) => void
+  /* Set by ChatShell so Settings can open this dialog too. The trigger below
+     still works on its own when these are omitted. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ProfileDialog({ me, username, avatarUrl, onSaved }: Props) {
-  const [open, setOpen] = useState(false)
+export function ProfileDialog({
+  me, username, avatarUrl, onSaved, open: openProp, onOpenChange,
+}: Props) {
+  const [openState, setOpenState] = useState(false)
+  const open = openProp ?? openState
+  const setOpen = onOpenChange ?? setOpenState
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          className="flex min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted/50"
+          aria-label="Edit your profile"
+        >
+          <Avatar className="h-7 w-7 shrink-0">
+            {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+              {username.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="truncate font-semibold">{username}</span>
+        </button>
+      </DialogTrigger>
+
+      <DialogContent>
+        {/* The draft lives in here, not in ProfileDialog: Radix unmounts a closed
+            DialogContent, so every open starts from what is actually stored and
+            a stale draft from a previous cancel cannot survive. Nothing to
+            synchronize, and it works however the dialog was opened. */}
+        <ProfileForm
+          me={me}
+          username={username}
+          avatarUrl={avatarUrl}
+          onSaved={onSaved}
+          onDone={() => setOpen(false)}
+        />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ProfileForm({
+  me, username, avatarUrl, onSaved, onDone,
+}: Omit<Props, 'open' | 'onOpenChange'> & { onDone: () => void }) {
   const [draftName, setDraftName] = useState(username)
   const [preview, setPreview] = useState(avatarUrl)
   const [pending, setPending] = useState(false)
@@ -102,106 +148,76 @@ export function ProfileDialog({ me, username, avatarUrl, onSaved }: Props) {
 
     onSaved({ username: parsed.data, avatarUrl: preview })
     toast.success('Profile updated')
-    setOpen(false)
+    onDone()
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        // Opening should show what is actually stored, not a stale draft from a
-        // previous cancel. This is an event, not state to synchronize.
-        if (next) {
-          setDraftName(username)
-          setPreview(avatarUrl)
-        }
-        setOpen(next)
-      }}
-    >
-      <DialogTrigger asChild>
-        <button
-          className="flex min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted/50"
-          aria-label="Edit your profile"
-        >
-          <Avatar className="h-7 w-7 shrink-0">
-            {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-              {username.charAt(0).toUpperCase()}
+    <form onSubmit={save}>
+      <DialogHeader>
+        <DialogTitle>Your profile</DialogTitle>
+        <DialogDescription>
+          Your username is how friends find you.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4 py-4">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16">
+            {preview && <AvatarImage src={preview} alt="" />}
+            <AvatarFallback className="bg-primary text-xl text-primary-foreground">
+              {(draftName || username).charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="truncate font-semibold">{username}</span>
-        </button>
-      </DialogTrigger>
-
-      <DialogContent>
-        <form onSubmit={save}>
-          <DialogHeader>
-            <DialogTitle>Your profile</DialogTitle>
-            <DialogDescription>
-              Your username is how friends find you.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                {preview && <AvatarImage src={preview} alt="" />}
-                <AvatarFallback className="bg-primary text-xl text-primary-foreground">
-                  {(draftName || username).charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <input
-                ref={fileRef}
-                type="file"
-                className="hidden"
-                accept={AVATAR_MIME.join(',')}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  e.target.value = ''
-                  if (file) void uploadAvatar(file)
-                }}
-              />
-              <span className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={pending}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  Change photo
-                </Button>
-                {preview && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => setPreview(null)}
-                  >
-                    Remove
-                  </Button>
-                )}
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="profile-username">Username</Label>
-              <Input
-                id="profile-username"
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                pattern="[A-Za-z0-9_]{3,24}"
-                required
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="submit" disabled={pending || !draftName.trim()}>
-              {pending ? 'Saving…' : 'Save'}
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            accept={AVATAR_MIME.join(',')}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void uploadAvatar(file)
+            }}
+          />
+          <span className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => fileRef.current?.click()}
+            >
+              Change photo
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            {preview && (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pending}
+                onClick={() => setPreview(null)}
+              >
+                Remove
+              </Button>
+            )}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="profile-username">Username</Label>
+          <Input
+            id="profile-username"
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            pattern="[A-Za-z0-9_]{3,24}"
+            required
+          />
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="submit" disabled={pending || !draftName.trim()}>
+          {pending ? 'Saving…' : 'Save'}
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }

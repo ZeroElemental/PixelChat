@@ -39,6 +39,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`${silkscreen.variable} ${plexSans.variable} ${plexMono.variable}`}
     >
+      <head>
+        {/* Same trick next-themes uses for the `dark` class: set it before the
+            first paint, or the backdrop animates for a frame on every load. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('pixelchat-motion')==='off')document.documentElement.classList.add('reduce-motion')}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}

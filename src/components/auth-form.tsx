@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { signIn, signUp, type AuthState } from '@/app/auth/actions'
-import { PixelBackdrop } from '@/components/pixel-backdrop'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,8 +18,9 @@ export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: stri
   )
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <PixelBackdrop />
+    // The site layout owns the backdrop and the header, so this centres inside
+    // what is left rather than against the viewport.
+    <div className="flex flex-1 items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="font-display text-xl">
