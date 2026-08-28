@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { SiteNavMenu } from '@/components/site-nav-menu'
+import { NavLink } from '@/components/nav-link'
 import { createClient } from '@/lib/supabase/server'
 
 // Anchors on the landing page have to be absolute: from /about a bare
@@ -30,13 +31,13 @@ export async function SiteHeader() {
 
         <nav className="ml-auto hidden items-center gap-1 md:flex">
           {links.map((link) => (
-            <Link
+            <NavLink
               key={link.href}
               href={link.href}
               className="px-3 py-2 text-sm hover:text-link hover:underline"
             >
               {link.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
 

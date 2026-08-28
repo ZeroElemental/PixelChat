@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { NavLink } from '@/components/nav-link'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -20,14 +20,14 @@ export function SiteNavMenu({ links }: { links: readonly { href: string; label: 
       </PopoverTrigger>
       <PopoverContent align="end" className="w-48 p-1">
         {links.map((link) => (
-          <Link
+          <NavLink
             key={link.href}
             href={link.href}
             onClick={() => setOpen(false)}
             className="block px-3 py-2 text-sm hover:bg-muted"
           >
             {link.label}
-          </Link>
+          </NavLink>
         ))}
       </PopoverContent>
     </Popover>

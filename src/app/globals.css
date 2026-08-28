@@ -253,6 +253,28 @@
   }
 }
 
+/* Block caret for the landing page's fake composer. Stepped, like everything
+   else here -- a caret that fades is a caret from the wrong decade. */
+.pixel-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  background: currentColor;
+  animation: caret-blink 1s steps(1, end) infinite;
+}
+
+@keyframes caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Motion is decoration here; nothing is communicated by it. The selector list is
    written twice on purpose: a media query and a class cannot share one rule, and
    the in-app Reduce motion toggle sets the class.
@@ -263,7 +285,8 @@
   .pixel-backdrop,
   .pixel-backdrop > span,
   .pixel-typing > span,
-  .pixel-burst > i {
+  .pixel-burst > i,
+  .pixel-caret {
     animation: none;
   }
 }
@@ -271,6 +294,7 @@
 .reduce-motion .pixel-backdrop,
 .reduce-motion .pixel-backdrop > span,
 .reduce-motion .pixel-typing > span,
-.reduce-motion .pixel-burst > i {
+.reduce-motion .pixel-burst > i,
+.reduce-motion .pixel-caret {
   animation: none;
 }

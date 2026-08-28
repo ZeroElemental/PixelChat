@@ -1,31 +1,22 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Image as ImageIcon, MessageSquare, Palette, Users } from 'lucide-react'
+import { ChatDemo } from '@/components/chat-demo'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 
-const FEATURES = [
-  {
-    icon: MessageSquare,
-    title: 'Realtime',
-    body: 'Messages, presence and typing indicators arrive over an authorized realtime channel -- no polling, no refresh.',
-  },
-  {
-    icon: Users,
-    title: 'Friends',
-    body: 'Find people by username, send a request, and get a private conversation the moment they accept.',
-  },
-  {
-    icon: ImageIcon,
-    title: 'Attachments',
-    body: 'Share images and files up to 10 MB. They live in a private bucket and are served over short-lived signed URLs.',
-  },
-  {
-    icon: Palette,
-    title: 'Two CRTs',
-    body: 'Paper-and-ink by day, green phosphor by night. Pick one or follow your system.',
-  },
+const SPEC = [
+  ['Protocol', 'Supabase Realtime. One authorized channel per conversation, joined with your own token.'],
+  ['Presence', 'Online and typing states ride the same socket as the messages. Nothing polls.'],
+  ['Attachments', 'Images and files up to 10 MB, in a private bucket, handed out as short-lived signed URLs.'],
+  ['Accounts', 'Email and password. Unique usernames, an editable profile, an avatar you can replace.'],
+  ['Themes', 'Paper and ink, or green phosphor. Follows your system unless you tell it otherwise.'],
+  ['Security', 'Row-level security on every table. Authorization decided from a locally verified token.'],
+] as const
+
+const LIMITS = [
+  'Not end-to-end encrypted. Traffic is encrypted in transit, but the server can read message contents.',
+  'No group chats. One conversation, two people, for now.',
+  'No desktop or mobile build. It runs in a browser and installs to a home screen.',
 ] as const
 
 export default async function Home() {
@@ -35,43 +26,61 @@ export default async function Home() {
 
   return (
     <>
-      <section className="flex flex-1 items-center justify-center p-6">
-        <div className="max-w-2xl space-y-8 text-center">
-          <span className="pixel-typing" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-          <h1 className="font-display text-3xl tracking-tight md:text-5xl">PixelChat</h1>
-          <p className="mx-auto max-w-md text-muted-foreground">
-            Fast, simple, and modern chat. Connect with friends, share files, and stay
-            in sync in real time.
-          </p>
-          <div className="flex items-center justify-center gap-4">
-            <Button asChild size="lg"><Link href="/login">Login</Link></Button>
-            <Button asChild size="lg" variant="secondary"><Link href="/signup">Sign Up</Link></Button>
+      {/* Same section > centred max-w-5xl nesting as the two below, so every
+          left edge on the page lines up. */}
+      <section className="px-4 py-16 md:py-24">
+        <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
+          <div className="space-y-6">
+            <h1 className="font-display text-3xl tracking-tight md:text-5xl">PixelChat</h1>
+            <p className="text-xl">Two people, one green screen.</p>
+            <p className="max-w-md text-muted-foreground">
+              Direct messages between friends. No threads, no channels, no bots.
+              Messages, presence and typing arrive over a realtime socket rather
+              than a poll loop, so the other side is where you left it.
+            </p>
+            <div className="flex items-center gap-4">
+              <Button asChild size="lg"><Link href="/signup">Sign Up</Link></Button>
+              <Button asChild size="lg" variant="secondary"><Link href="/login">Login</Link></Button>
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">
+              Free. Runs in a browser. No card, no trial.
+            </p>
           </div>
+
+          <ChatDemo />
         </div>
       </section>
 
-      {/* scroll-mt clears the sticky header, which would otherwise cover the
-          heading when the nav anchor jumps here. */}
+      {/* The header's Features link points here, so the id has to live on this
+          section. scroll-mt clears the sticky header on the jump. */}
       <section id="features" className="scroll-mt-20 border-t-2 px-4 py-16">
-        <div className="mx-auto max-w-5xl space-y-8">
-          <h2 className="text-center font-display text-2xl">What you get</h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((feature) => (
-              <Card key={feature.title}>
-                <CardHeader>
-                  <feature.icon className="h-6 w-6 text-link" aria-hidden="true" />
-                  <CardTitle className="font-display text-base">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{feature.body}</p>
-                </CardContent>
-              </Card>
+        {/* max-w-5xl, like the hero, so every section shares one left edge. */}
+        <div className="mx-auto max-w-5xl">
+          <h2 className="mb-8 font-display text-xl">Specifications</h2>
+          <dl>
+            {SPEC.map(([term, detail]) => (
+              <div key={term} className="grid gap-1 border-t-2 py-4 sm:grid-cols-[10rem_1fr] sm:gap-6">
+                <dt className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  {term}
+                </dt>
+                <dd className="max-w-2xl text-sm">{detail}</dd>
+              </div>
             ))}
-          </div>
+          </dl>
+        </div>
+      </section>
+
+      <section className="border-t-2 px-4 py-16">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <h2 className="font-display text-xl">What it isn&apos;t</h2>
+          <ul className="space-y-3">
+            {LIMITS.map((limit) => (
+              <li key={limit} className="flex max-w-2xl gap-3 text-sm text-muted-foreground">
+                <span aria-hidden="true" className="text-link">&mdash;</span>
+                {limit}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </>
