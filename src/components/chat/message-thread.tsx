@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Attachment } from './attachment'
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIME } from '@/lib/validation'
+import { emitPixels } from '@/lib/pixel-burst'
 import type { Conversation, Message } from '@/lib/types'
 
 type Props = {
@@ -32,6 +33,8 @@ export function MessageThread({
   const [draft, setDraft] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const burstRef = useRef<HTMLSpanElement>(null)
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -43,6 +46,7 @@ export function MessageThread({
   }, [])
 
   function handleDraft(value: string) {
+    if (value.length > draft.length) emitPixels(inputRef.current, burstRef.current, value)
     setDraft(value)
     onTyping(true)
     if (typingTimeout.current) clearTimeout(typingTimeout.current)
@@ -166,13 +170,19 @@ export function MessageThread({
         >
           <Paperclip className="h-4 w-4" />
         </Button>
-        <Input
-          value={draft}
-          onChange={(e) => handleDraft(e.target.value)}
-          placeholder={`Message ${conversation.other_username}`}
-          maxLength={4000}
-          aria-label="Message"
-        />
+        <span className="relative flex flex-1">
+          <Input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => handleDraft(e.target.value)}
+            placeholder={`Message ${conversation.other_username}`}
+            maxLength={4000}
+            aria-label="Message"
+          />
+          {/* Where the burst spawns. Decorative, so it takes no pointer events
+              and is hidden from assistive tech. */}
+          <span ref={burstRef} className="pixel-burst" aria-hidden="true" />
+        </span>
         <Button type="submit" size="icon" aria-label="Send" disabled={!draft.trim()}>
           <Send className="h-4 w-4" />
         </Button>

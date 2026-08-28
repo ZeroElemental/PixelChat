@@ -229,11 +229,72 @@
   }
 }
 
-/* Motion is decoration here; nothing is communicated by it. */
+/* Pixels thrown off the caret as you type. The host span overlays the input and
+   is inert; each pixel removes itself on animationend. */
+.pixel-burst {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pixel-burst > i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--primary);
+  animation: pixel-pop 480ms steps(6, end) forwards;
+}
+
+@keyframes pixel-pop {
+  to {
+    transform: translate(var(--dx), var(--dy));
+    opacity: 0;
+  }
+}
+
+/* Block caret for the landing page's fake composer. Stepped, like everything
+   else here -- a caret that fades is a caret from the wrong decade. */
+.pixel-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  background: currentColor;
+  animation: caret-blink 1s steps(1, end) infinite;
+}
+
+@keyframes caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Motion is decoration here; nothing is communicated by it. The selector list is
+   written twice on purpose: a media query and a class cannot share one rule, and
+   the in-app Reduce motion toggle sets the class.
+   ponytail: this governs the ambient animations. The motion-reduce: variants on
+   the button hover/press transforms stay media-query-only -- rewriting the whole
+   button variant set for the class is not worth it. */
 @media (prefers-reduced-motion: reduce) {
   .pixel-backdrop,
   .pixel-backdrop > span,
-  .pixel-typing > span {
+  .pixel-typing > span,
+  .pixel-burst > i,
+  .pixel-caret {
     animation: none;
   }
+}
+
+.reduce-motion .pixel-backdrop,
+.reduce-motion .pixel-backdrop > span,
+.reduce-motion .pixel-typing > span,
+.reduce-motion .pixel-burst > i,
+.reduce-motion .pixel-caret {
+  animation: none;
 }

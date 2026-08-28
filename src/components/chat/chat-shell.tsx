@@ -1,17 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { signOut } from '@/app/auth/actions'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { MessageThread } from './message-thread'
 import { AddFriendDialog, FriendRequests } from './friends'
 import { ProfileDialog } from './profile-dialog'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { AppMenu } from './app-menu'
+import { beep } from '@/lib/prefs'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
 import { usernameSchema } from '@/lib/validation'
 
@@ -36,6 +34,8 @@ export function ChatShell({
 
   // Editable in the profile dialog, so it outgrows the server-rendered prop.
   const [profile, setProfile] = useState({ username, avatarUrl })
+  // Lifted out of ProfileDialog so Settings can open it as well as the trigger.
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const [conversations, setConversations] = useState(initialConversations)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -130,6 +130,10 @@ export function ChatShell({
 
         channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
           const message = payload as Message
+
+          // Reads the setting at call time, so toggling it takes effect without
+          // tearing down and rebuilding every subscription.
+          if (message.sender_id !== me) beep()
 
           setConversations((prev) =>
             [...prev]
@@ -412,6 +416,8 @@ export function ChatShell({
             username={profile.username}
             avatarUrl={profile.avatarUrl}
             onSaved={setProfile}
+            open={profileOpen}
+            onOpenChange={setProfileOpen}
           />
           <span className="flex items-center">
             <AddFriendDialog onAdd={addFriend} />
@@ -420,12 +426,7 @@ export function ChatShell({
               onAccept={acceptRequest}
               onReject={rejectRequest}
             />
-            <ThemeToggle />
-            <form action={signOut}>
-              <Button type="submit" variant="ghost" size="icon" aria-label="Log out">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </form>
+            <AppMenu onEditProfile={() => setProfileOpen(true)} />
           </span>
         </header>
 
