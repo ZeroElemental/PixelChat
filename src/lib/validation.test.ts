@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { safeRedirectPath, signUpSchema, usernameSchema } from './validation.ts'
+import {
+  newPasswordSchema, resetRequestSchema, safeRedirectPath, signUpSchema, usernameSchema,
+} from './validation.ts'
 
 const BACKSLASH = String.fromCharCode(92)
 
@@ -29,6 +31,19 @@ test('safeRedirectPath refuses anything that leaves the origin', () => {
 
 test('safeRedirectPath honours an explicit fallback', () => {
   assert.equal(safeRedirectPath('https://evil.com', '/login'), '/login')
+})
+
+test('the reset schemas inherit the sign-in rules they were derived from', () => {
+  assert.equal(resetRequestSchema.safeParse({ email: 'you@example.com' }).success, true)
+  assert.equal(resetRequestSchema.safeParse({ email: 'not-an-email' }).success, false)
+  // Derived with .pick(), so a password must not be required -- or the
+  // forgot-password form could never submit.
+  assert.equal(resetRequestSchema.safeParse({ email: 'you@example.com' }).success, true)
+
+  assert.equal(newPasswordSchema.safeParse({ password: 'a'.repeat(8) }).success, true)
+  assert.equal(newPasswordSchema.safeParse({ password: 'short' }).success, false)
+  // bcrypt truncates silently past 72 bytes; the cap has to survive the reuse.
+  assert.equal(newPasswordSchema.safeParse({ password: 'a'.repeat(73) }).success, false)
 })
 
 test('usernames match what the database check constraint allows', () => {

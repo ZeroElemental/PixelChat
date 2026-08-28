@@ -5,16 +5,29 @@ import Link from 'next/link'
 import { Download, Info, MoreVertical, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ContentDialog } from '@/components/content-dialog'
+import { AboutContent } from '@/components/content/about'
 import { SettingsDialog } from './settings-dialog'
+import { DeleteAccountDialog } from './delete-account-dialog'
 
 const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted'
 
-/* The signed-in counterpart of SiteHeader's nav. A DialogTrigger nested inside
-   PopoverContent would unmount with the popover before the dialog could open, so
-   the dialog is a sibling driven by state instead. */
-export function AppMenu({ onEditProfile }: { onEditProfile: () => void }) {
+/* The signed-in counterpart of SiteHeader's nav. Every dialog here is a sibling
+   of the Popover driven by state: one nested inside PopoverContent would unmount
+   with the popover before it could open.
+   About opens in place rather than navigating, so reading it does not take you
+   out of the conversation you were in. */
+export function AppMenu({
+  me, username, onEditProfile,
+}: {
+  me: string
+  username: string
+  onEditProfile: () => void
+}) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
     <>
@@ -25,10 +38,17 @@ export function AppMenu({ onEditProfile }: { onEditProfile: () => void }) {
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-48 p-1">
-          <Link href="/about" className={ITEM} onClick={() => setMenuOpen(false)}>
+          <button
+            type="button"
+            className={ITEM}
+            onClick={() => {
+              setMenuOpen(false)
+              setAboutOpen(true)
+            }}
+          >
             <Info className="h-4 w-4" />
             About us
-          </Link>
+          </button>
           <Link href="/download" className={ITEM} onClick={() => setMenuOpen(false)}>
             <Download className="h-4 w-4" />
             Download
@@ -47,6 +67,10 @@ export function AppMenu({ onEditProfile }: { onEditProfile: () => void }) {
         </PopoverContent>
       </Popover>
 
+      <ContentDialog open={aboutOpen} onOpenChange={setAboutOpen} title="About us">
+        <AboutContent />
+      </ContentDialog>
+
       {/* Mounted only once opened, so it can read localStorage straight into
           useState without a server render to reconcile against. */}
       {settingsOpen && (
@@ -57,8 +81,19 @@ export function AppMenu({ onEditProfile }: { onEditProfile: () => void }) {
             setSettingsOpen(false)
             onEditProfile()
           }}
+          onDeleteAccount={() => {
+            setSettingsOpen(false)
+            setDeleteOpen(true)
+          }}
         />
       )}
+
+      <DeleteAccountDialog
+        me={me}
+        username={username}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
     </>
   )
 }

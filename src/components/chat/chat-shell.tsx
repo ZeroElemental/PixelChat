@@ -426,7 +426,11 @@ export function ChatShell({
               onAccept={acceptRequest}
               onReject={rejectRequest}
             />
-            <AppMenu onEditProfile={() => setProfileOpen(true)} />
+            <AppMenu
+              me={me}
+              username={profile.username}
+              onEditProfile={() => setProfileOpen(true)}
+            />
           </span>
         </header>
 

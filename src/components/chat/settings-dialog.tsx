@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { LogOut, UserPen } from 'lucide-react'
+import { LogOut, Trash2, UserPen } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,9 +20,12 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onEditProfile: () => void
+  onDeleteAccount: () => void
 }
 
-export function SettingsDialog({ open, onOpenChange, onEditProfile }: Props) {
+export function SettingsDialog({
+  open, onOpenChange, onEditProfile, onDeleteAccount,
+}: Props) {
   const { theme, setTheme } = useTheme()
 
   // Both live in localStorage. AppMenu only mounts this once the user has opened
@@ -102,11 +105,25 @@ export function SettingsDialog({ open, onOpenChange, onEditProfile }: Props) {
               Edit profile
             </Button>
             <form action={signOut}>
-              <Button type="submit" variant="destructive">
+              <Button type="submit" variant="secondary">
                 <LogOut className="h-4 w-4" />
                 Log out
               </Button>
             </form>
+          </div>
+
+          {/* Destructive is reserved for the one thing here that cannot be
+              undone, so logging out above uses the neutral variant. */}
+          <div className="space-y-2 border-t-2 pt-4">
+            <p className="text-sm font-medium text-destructive">Danger zone</p>
+            <p className="text-sm text-muted-foreground">
+              Deleting removes your profile, your messages and your conversations
+              for good.
+            </p>
+            <Button type="button" variant="destructive" onClick={onDeleteAccount}>
+              <Trash2 className="h-4 w-4" />
+              Delete account
+            </Button>
           </div>
         </div>
       </DialogContent>
