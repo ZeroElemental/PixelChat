@@ -1,8 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const AUTH_PAGES = ['/login', '/signup']
-const PROTECTED = ['/chat']
+const AUTH_PAGES = ['/login', '/signup', '/forgot-password']
+// /auth/reset is protected, not an auth page: the recovery link establishes a
+// session before the user gets there, so listing it above would bounce exactly
+// the person who needs it to /chat. startsWith is safe here -- /auth/callback
+// does not match '/auth/reset'.
+const PROTECTED = ['/chat', '/auth/reset']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

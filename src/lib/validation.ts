@@ -14,6 +14,11 @@ export const signUpSchema = signInSchema.extend({
     .regex(/^[A-Za-z0-9_]{3,24}$/, '3-24 letters, numbers or underscores'),
 })
 
+// Reset asks for the address alone; the new-password form asks for the password
+// alone. Both reuse the pieces above rather than restating the rules.
+export const resetRequestSchema = signInSchema.pick({ email: true })
+export const newPasswordSchema = z.object({ password })
+
 export const messageSchema = z.object({
   conversationId: z.uuid(),
   body: z.string().trim().min(1, 'Message is empty').max(4000),

@@ -83,6 +83,13 @@ export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: stri
                 {isSignUp ? 'Login' : 'Sign Up'}
               </Link>
             </p>
+            {!isSignUp && (
+              <p className="mt-2 text-center text-sm">
+                <Link href="/forgot-password" className="text-link hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
+            )}
           </CardFooter>
         </form>
       </Card>

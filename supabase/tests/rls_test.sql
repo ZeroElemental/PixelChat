@@ -126,6 +126,47 @@ begin
   select count(*) into n from public.messages where conversation_id = conv and body = 'hello bob';
   if n <> 1 then failures := failures || 'the stored message was modified'; end if;
 
+  -- ---- account deletion --------------------------------------------------
+  -- Runs last: it destroys the fixtures the assertions above rely on.
+  -- This caught a real one: the first version of delete_own_account() also
+  -- cleared the caller's storage.objects rows, which Supabase's
+  -- storage.protect_delete() trigger rejects outright -- 42501, aborting the
+  -- whole deletion. Storage is the client's job now, through the Storage API.
+  execute 'set local role authenticated';
+  execute format('set local request.jwt.claims = %L',
+                 json_build_object('sub', alice, 'role', 'authenticated')::text);
+  perform public.delete_own_account();
+  execute 'reset role';
+
+  select count(*) into n from public.profiles where id = alice;
+  if n <> 0 then failures := failures || 'the profile survived delete_own_account'; end if;
+
+  select count(*) into n from public.messages where sender_id = alice;
+  if n <> 0 then failures := failures || 'messages survived delete_own_account'; end if;
+
+  select count(*) into n from public.friendships
+   where alice in (requester_id, addressee_id);
+  if n <> 0 then failures := failures || 'friendships survived delete_own_account'; end if;
+
+  select count(*) into n from auth.users where id = alice;
+  if n <> 0 then failures := failures || 'the auth row survived delete_own_account'; end if;
+
+  -- The reaper in 20260825133149 only fires at zero members, so without the
+  -- explicit conversation delete this row, bob's membership and bob's messages
+  -- would all outlive alice, reachable by nobody.
+  select count(*) into n from public.conversations where id = conv;
+  if n <> 0 then failures := failures || 'the conversation was orphaned, not deleted'; end if;
+
+  select count(*) into n from public.conversation_members where conversation_id = conv;
+  if n <> 0 then failures := failures || 'the peer membership was orphaned'; end if;
+
+  select count(*) into n from public.messages where conversation_id = conv;
+  if n <> 0 then failures := failures || 'the peer messages were orphaned'; end if;
+
+  -- bob is untouched: deleting an account must not take the other party with it
+  select count(*) into n from public.profiles where id = bob;
+  if n <> 1 then failures := failures || 'deleting alice also removed bob'; end if;
+
   -- ---- report ------------------------------------------------------------
   if array_length(failures, 1) is not null then
     raise exception E'RLS TEST FAILED:\n  - %', array_to_string(failures, E'\n  - ');

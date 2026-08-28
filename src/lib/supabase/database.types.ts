@@ -189,6 +189,7 @@ export type Database = {
     }
     Functions: {
       accept_friend_request: { Args: { request_from: string }; Returns: string }
+      delete_own_account: { Args: never; Returns: undefined }
       my_conversations: {
         Args: never
         Returns: {
