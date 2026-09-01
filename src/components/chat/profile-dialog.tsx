@@ -11,7 +11,9 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
-import { AVATAR_MAX_BYTES, AVATAR_MIME, usernameSchema } from '@/lib/validation'
+import {
+  AVATAR_MAX_BYTES, AVATAR_MIME, USERNAME_PATTERN, usernameSchema,
+} from '@/lib/validation'
 
 type Props = {
   me: string
@@ -207,7 +209,7 @@ function ProfileForm({
             id="profile-username"
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
-            pattern="[A-Za-z0-9_]{3,24}"
+            pattern={USERNAME_PATTERN}
             required
           />
         </div>

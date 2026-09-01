@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { FriendRequest } from '@/lib/types'
+import { USERNAME_PATTERN } from '@/lib/validation'
 
 export function AddFriendDialog({ onAdd }: { onAdd: (username: string) => Promise<boolean> }) {
   const [open, setOpen] = useState(false)
@@ -49,7 +50,7 @@ export function AddFriendDialog({ onAdd }: { onAdd: (username: string) => Promis
               id="friend-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              pattern="[A-Za-z0-9_]{3,24}"
+              pattern={USERNAME_PATTERN}
               placeholder="pixelfan"
               required
             />
