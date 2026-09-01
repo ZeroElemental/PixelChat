@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  ATTACHMENT_RULE, AVATAR_RULE, checkFile,
   newPasswordSchema, resetRequestSchema, safeRedirectPath, signUpSchema, usernameSchema,
 } from './validation.ts'
 
@@ -62,4 +63,29 @@ test('signup requires a valid email and an 8-72 character password', () => {
   // bcrypt truncates past 72 bytes, so anything longer must be rejected outright
   assert.equal(signUpSchema.safeParse({ ...base, password: 'x'.repeat(73) }).success, false)
   assert.equal(signUpSchema.safeParse({ ...base, email: 'nope', password: 'x'.repeat(8) }).success, false)
+})
+
+test('checkFile accepts allowed files and names what is wrong with the rest', () => {
+  const png = { size: 1024, type: 'image/png' }
+  assert.equal(checkFile(png, AVATAR_RULE), null)
+  assert.equal(checkFile(png, ATTACHMENT_RULE), null)
+
+  // Size is checked before type, so an oversized file reports its size.
+  assert.equal(
+    checkFile({ size: AVATAR_RULE.maxBytes + 1, type: 'image/png' }, AVATAR_RULE),
+    AVATAR_RULE.tooBig,
+  )
+  assert.equal(
+    checkFile({ size: 1024, type: 'image/gif' }, AVATAR_RULE),
+    AVATAR_RULE.wrongType,
+  )
+  // Exactly at the limit is still allowed.
+  assert.equal(checkFile({ size: AVATAR_RULE.maxBytes, type: 'image/png' }, AVATAR_RULE), null)
+
+  // A GIF is fine as an attachment but not as an avatar -- the rules differ.
+  assert.equal(checkFile({ size: 1024, type: 'image/gif' }, ATTACHMENT_RULE), null)
+  assert.equal(
+    checkFile({ size: 1024, type: 'application/x-msdownload' }, ATTACHMENT_RULE),
+    ATTACHMENT_RULE.wrongType,
+  )
 })

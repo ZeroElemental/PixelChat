@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserAvatar } from '@/components/user-avatar'
 import { Attachment } from './attachment'
-import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIME } from '@/lib/validation'
+import { ATTACHMENT_MIME, ATTACHMENT_RULE, checkFile } from '@/lib/validation'
 import { emitPixels } from '@/lib/pixel-burst'
 import type { Conversation, Message } from '@/lib/types'
 
@@ -67,14 +67,9 @@ export function MessageThread({
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    // The bucket enforces both of these too; checking here just avoids a
-    // pointless upload and gives a better message.
-    if (file.size > ATTACHMENT_MAX_BYTES) {
-      toast.error('Files must be 10 MB or smaller')
-      return
-    }
-    if (!(ATTACHMENT_MIME as readonly string[]).includes(file.type)) {
-      toast.error('That file type is not allowed')
+    const problem = checkFile(file, ATTACHMENT_RULE)
+    if (problem) {
+      toast.error(problem)
       return
     }
     onUpload(file)

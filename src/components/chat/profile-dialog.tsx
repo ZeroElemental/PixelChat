@@ -12,7 +12,7 @@ import {
   DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
 import {
-  AVATAR_MAX_BYTES, AVATAR_MIME, USERNAME_PATTERN, usernameSchema,
+  AVATAR_MIME, AVATAR_RULE, USERNAME_PATTERN, checkFile, usernameSchema,
 } from '@/lib/validation'
 
 type Props = {
@@ -76,14 +76,9 @@ function ProfileForm({
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function uploadAvatar(file: File) {
-    // The bucket enforces both of these too; checking here just avoids a
-    // pointless upload and gives a better message.
-    if (file.size > AVATAR_MAX_BYTES) {
-      toast.error('Avatars must be 2 MB or smaller')
-      return
-    }
-    if (!(AVATAR_MIME as readonly string[]).includes(file.type)) {
-      toast.error('Use a PNG, JPEG or WebP image')
+    const problem = checkFile(file, AVATAR_RULE)
+    if (problem) {
+      toast.error(problem)
       return
     }
 

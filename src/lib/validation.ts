@@ -43,6 +43,39 @@ export const ATTACHMENT_MIME = [
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 export const AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'] as const
 
+export type FileRule = {
+  maxBytes: number
+  mime: readonly string[]
+  tooBig: string
+  wrongType: string
+}
+
+export const ATTACHMENT_RULE: FileRule = {
+  maxBytes: ATTACHMENT_MAX_BYTES,
+  mime: ATTACHMENT_MIME,
+  tooBig: 'Files must be 10 MB or smaller',
+  wrongType: 'That file type is not allowed',
+}
+
+export const AVATAR_RULE: FileRule = {
+  maxBytes: AVATAR_MAX_BYTES,
+  mime: AVATAR_MIME,
+  tooBig: 'Avatars must be 2 MB or smaller',
+  wrongType: 'Use a PNG, JPEG or WebP image',
+}
+
+/**
+ * Returns the message to show, or null when the file is acceptable.
+ *
+ * The buckets enforce both limits too; checking here just avoids a pointless
+ * upload and gives a better message.
+ */
+export function checkFile(file: { size: number; type: string }, rule: FileRule): string | null {
+  if (file.size > rule.maxBytes) return rule.tooBig
+  if (!rule.mime.includes(file.type)) return rule.wrongType
+  return null
+}
+
 /**
  * `next` arrives from the query string, so it must never be trusted as a
  * redirect target: an absolute URL there is an open redirect off the site.
