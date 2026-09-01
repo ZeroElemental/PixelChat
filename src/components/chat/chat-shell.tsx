@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { UserAvatar } from '@/components/user-avatar'
 import { MessageThread } from './message-thread'
 import { AddFriendDialog, FriendRequests } from './friends'
 import { ProfileDialog } from './profile-dialog'
 import { AppMenu } from './app-menu'
+import { useConversationChannels, useFriendNotifications } from './use-realtime'
 import { beep } from '@/lib/prefs'
 import { fetchPendingRequests } from '@/lib/queries'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
@@ -43,17 +43,12 @@ export function ChatShell({
   const [messages, setMessages] = useState<Message[]>([])
   const [hasMore, setHasMore] = useState(false)
   const [requests, setRequests] = useState<FriendRequest[]>(initialRequests)
-  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
-  const [typingIds, setTypingIds] = useState<Set<string>>(new Set())
 
   // Read by realtime callbacks, which would otherwise close over a stale value.
   const activeIdRef = useRef<string | null>(null)
   useEffect(() => {
     activeIdRef.current = activeId
   }, [activeId])
-
-  const channelsRef = useRef(new Map<string, RealtimeChannel>())
-  const presenceRef = useRef(new Map<string, { online: string[]; typing: string[] }>())
 
   const active = conversations.find((c) => c.conversation_id === activeId) ?? null
 
@@ -83,155 +78,63 @@ export function ChatShell({
   )
 
   // --- realtime -------------------------------------------------------------
-  // One private channel per conversation carries both the messages (broadcast)
-  // and the online/typing state (presence).
-  // ponytail: one channel per conversation. Fine into the low hundreds; if a
-  // user ever has thousands, switch to a single per-user fan-out topic.
+
   const conversationIds = conversations.map((c) => c.conversation_id).join(',')
 
-  useEffect(() => {
-    const ids = conversationIds ? conversationIds.split(',') : []
-    let cancelled = false
+  const { onlineIds, typingIds, setTyping } = useConversationChannels({
+    supabase,
+    me,
+    conversationIds,
+    onMessage: (message) => {
+      // Reads the setting at call time, so toggling it takes effect without
+      // tearing down and rebuilding every subscription.
+      if (message.sender_id !== me) beep()
 
-    function recomputePresence() {
-      const online = new Set<string>()
-      const typing = new Set<string>()
-      for (const entry of presenceRef.current.values()) {
-        entry.online.forEach((id) => online.add(id))
-        entry.typing.forEach((id) => typing.add(id))
-      }
-      setOnlineIds(online)
-      setTypingIds(typing)
-    }
-
-    async function subscribe() {
-      // Private channels are authorized against the caller's JWT, so the token
-      // has to be handed to the realtime socket before joining.
-      await supabase.realtime.setAuth()
-      if (cancelled) return
-
-      for (const id of ids) {
-        if (channelsRef.current.has(id)) continue
-
-        const channel = supabase.channel(`conversation:${id}`, {
-          // enabled:true is required for this client to receive presence state;
-          // a presence listener alone would enable it implicitly, which is easy to break.
-          config: { private: true, presence: { key: me, enabled: true } },
-        })
-
-        channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
-          const message = payload as Message
-
-          // Reads the setting at call time, so toggling it takes effect without
-          // tearing down and rebuilding every subscription.
-          if (message.sender_id !== me) beep()
-
-          setConversations((prev) =>
-            [...prev]
-              .map((c) =>
-                c.conversation_id === message.conversation_id
-                  ? {
-                      ...c,
-                      last_message_at: message.created_at,
-                      last_message_preview: previewOf(message),
-                      unread_count:
-                        message.sender_id !== me &&
-                        activeIdRef.current !== message.conversation_id
-                          ? c.unread_count + 1
-                          : c.unread_count,
-                    }
-                  : c,
-              )
-              .sort((a, b) => b.last_message_at.localeCompare(a.last_message_at)),
+      setConversations((prev) =>
+        [...prev]
+          .map((c) =>
+            c.conversation_id === message.conversation_id
+              ? {
+                  ...c,
+                  last_message_at: message.created_at,
+                  last_message_preview: previewOf(message),
+                  unread_count:
+                    message.sender_id !== me &&
+                    activeIdRef.current !== message.conversation_id
+                      ? c.unread_count + 1
+                      : c.unread_count,
+                }
+              : c,
           )
+          .sort((a, b) => b.last_message_at.localeCompare(a.last_message_at)),
+      )
 
-          if (activeIdRef.current === message.conversation_id) {
-            // Also reconciles our own optimistic copy with the stored row.
-            setMessages((prev) => {
-              const at = prev.findIndex((m) => m.id === message.id)
-              if (at === -1) return [...prev, message]
-              const next = [...prev]
-              next[at] = message
-              return next
-            })
-            if (message.sender_id !== me) void markRead(message.conversation_id)
-          }
+      if (activeIdRef.current === message.conversation_id) {
+        // Also reconciles our own optimistic copy with the stored row.
+        setMessages((prev) => {
+          const at = prev.findIndex((m) => m.id === message.id)
+          if (at === -1) return [...prev, message]
+          const next = [...prev]
+          next[at] = message
+          return next
         })
-
-        channel.on('presence', { event: 'sync' }, () => {
-          const state = channel.presenceState<{ typing?: boolean }>()
-          const online: string[] = []
-          const typing: string[] = []
-          for (const [key, metas] of Object.entries(state)) {
-            if (key === me) continue
-            online.push(key)
-            if (metas.some((meta) => meta.typing)) typing.push(key)
-          }
-          presenceRef.current.set(id, { online, typing })
-          recomputePresence()
-        })
-
-        channel.subscribe((status) => {
-          if (status === 'SUBSCRIBED') void channel.track({ typing: false })
-        })
-
-        channelsRef.current.set(id, channel)
+        if (message.sender_id !== me) void markRead(message.conversation_id)
       }
+    },
+  })
 
-      // Drop channels for conversations that no longer exist.
-      for (const [id, channel] of channelsRef.current) {
-        if (!ids.includes(id)) {
-          void supabase.removeChannel(channel)
-          channelsRef.current.delete(id)
-          presenceRef.current.delete(id)
-        }
-      }
-      recomputePresence()
-    }
-
-    void subscribe()
-    return () => {
-      cancelled = true
-    }
-  }, [conversationIds, supabase, me, markRead])
-
-  // Unsubscribe everything only when the whole shell goes away.
-  useEffect(() => {
-    const channels = channelsRef.current
-    return () => {
-      for (const channel of channels.values()) void supabase.removeChannel(channel)
-      channels.clear()
-    }
-  }, [supabase])
-
-  // Private inbox for friend-request notifications. Clients can read this topic
-  // but not write to it, so a notification cannot be forged.
-  useEffect(() => {
-    let channel: RealtimeChannel | null = null
-    let cancelled = false
-
-    async function subscribe() {
-      await supabase.realtime.setAuth()
-      if (cancelled) return
-      channel = supabase.channel(`user:${me}`, { config: { private: true } })
-      channel.on('broadcast', { event: 'friendship' }, ({ payload }) => {
-        if (payload.status === 'pending') {
-          void refreshRequests()
-          toast.info('New friend request')
-        } else if (payload.status === 'accepted') {
-          void refreshConversations()
-          toast.success('Friend request accepted')
-        }
-      })
-      channel.subscribe()
-    }
-
-    void subscribe()
-    return () => {
-      cancelled = true
-      if (channel) void supabase.removeChannel(channel)
-    }
-  }, [supabase, me, refreshRequests, refreshConversations])
+  useFriendNotifications({
+    supabase,
+    me,
+    onRequest: () => {
+      void refreshRequests()
+      toast.info('New friend request')
+    },
+    onAccepted: () => {
+      void refreshConversations()
+      toast.success('Friend request accepted')
+    },
+  })
 
   // --- actions --------------------------------------------------------------
 
@@ -323,9 +226,8 @@ export function ChatShell({
     if (error) toast.error('Could not attach that file')
   }
 
-  function setTyping(typing: boolean) {
-    if (!activeId) return
-    void channelsRef.current.get(activeId)?.track({ typing })
+  function handleTyping(typing: boolean) {
+    if (activeId) setTyping(activeId, typing)
   }
 
   async function addFriend(name: string): Promise<boolean> {
@@ -483,7 +385,7 @@ export function ChatShell({
           hasMore={hasMore}
           onSend={send}
           onUpload={upload}
-          onTyping={setTyping}
+          onTyping={handleTyping}
           onLoadOlder={loadOlder}
           onBack={() => setActiveId(null)}
         />
