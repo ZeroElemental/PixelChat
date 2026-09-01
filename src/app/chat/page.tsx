@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChatShell } from '@/components/chat/chat-shell'
-import type { FriendRequest } from '@/lib/types'
+import { fetchPendingRequests } from '@/lib/queries'
 
 export const metadata = { title: 'Chat · PixelChat' }
 
@@ -12,20 +12,11 @@ export default async function ChatPage() {
   const me = claimsData?.claims?.sub
   if (!me) redirect('/login')
 
-  const [conversations, profile, pending] = await Promise.all([
+  const [conversations, profile, requests] = await Promise.all([
     supabase.rpc('my_conversations'),
     supabase.from('profiles').select('username, avatar_url').eq('id', me).single(),
-    supabase
-      .from('friendships')
-      .select('requester_id, profiles!friendships_requester_id_fkey(username)')
-      .eq('addressee_id', me)
-      .eq('status', 'pending'),
+    fetchPendingRequests(supabase, me),
   ])
-
-  const requests: FriendRequest[] = (pending.data ?? []).map((row) => ({
-    requester_id: row.requester_id,
-    username: row.profiles?.username ?? 'unknown',
-  }))
 
   return (
     <ChatShell

@@ -10,6 +10,7 @@ import { AddFriendDialog, FriendRequests } from './friends'
 import { ProfileDialog } from './profile-dialog'
 import { AppMenu } from './app-menu'
 import { beep } from '@/lib/prefs'
+import { fetchPendingRequests } from '@/lib/queries'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
 import { usernameSchema } from '@/lib/validation'
 
@@ -62,17 +63,7 @@ export function ChatShell({
   }, [supabase])
 
   const refreshRequests = useCallback(async () => {
-    const { data } = await supabase
-      .from('friendships')
-      .select('requester_id, profiles!friendships_requester_id_fkey(username)')
-      .eq('addressee_id', me)
-      .eq('status', 'pending')
-    setRequests(
-      (data ?? []).map((row) => ({
-        requester_id: row.requester_id,
-        username: row.profiles?.username ?? 'unknown',
-      })),
-    )
+    setRequests(await fetchPendingRequests(supabase, me))
   }, [supabase, me])
 
   const markRead = useCallback(
