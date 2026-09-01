@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/user-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,12 +40,12 @@ export function ProfileDialog({
           className="flex min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted/50"
           aria-label="Edit your profile"
         >
-          <Avatar className="h-7 w-7 shrink-0">
-            {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-              {username.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            className="h-7 w-7 shrink-0"
+            fallbackClassName="text-xs"
+            name={username}
+            avatarUrl={avatarUrl}
+          />
           <span className="truncate font-semibold">{username}</span>
         </button>
       </DialogTrigger>
@@ -164,12 +164,12 @@ function ProfileForm({
 
       <div className="space-y-4 py-4">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            {preview && <AvatarImage src={preview} alt="" />}
-            <AvatarFallback className="bg-primary text-xl text-primary-foreground">
-              {(draftName || username).charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            className="h-16 w-16"
+            fallbackClassName="text-xl"
+            name={draftName || username}
+            avatarUrl={preview}
+          />
           <input
             ref={fileRef}
             type="file"

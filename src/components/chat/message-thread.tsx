@@ -5,7 +5,7 @@ import { ArrowLeft, Paperclip, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/user-avatar'
 import { Attachment } from './attachment'
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIME } from '@/lib/validation'
 import { emitPixels } from '@/lib/pixel-burst'
@@ -93,14 +93,11 @@ export function MessageThread({
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <Avatar className="h-9 w-9">
-          {conversation.other_avatar_url && (
-            <AvatarImage src={conversation.other_avatar_url} alt="" />
-          )}
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {conversation.other_username.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          className="h-9 w-9"
+          name={conversation.other_username}
+          avatarUrl={conversation.other_avatar_url}
+        />
         <div>
           <p className="font-medium leading-tight">{conversation.other_username}</p>
           <p className="text-xs text-muted-foreground">

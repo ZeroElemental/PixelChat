@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/user-avatar'
 import { MessageThread } from './message-thread'
 import { AddFriendDialog, FriendRequests } from './friends'
 import { ProfileDialog } from './profile-dialog'
@@ -444,14 +444,11 @@ export function ChatShell({
               ].join(' ')}
             >
               <span className="relative shrink-0">
-                <Avatar className="h-9 w-9">
-                  {conversation.other_avatar_url && (
-                    <AvatarImage src={conversation.other_avatar_url} alt="" />
-                  )}
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {conversation.other_username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  className="h-9 w-9"
+                  name={conversation.other_username}
+                  avatarUrl={conversation.other_avatar_url}
+                />
                 {onlineIds.has(conversation.other_id) && (
                   <span className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-presence ring-2 ring-background" />
                 )}
