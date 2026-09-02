@@ -30,15 +30,17 @@ export const messageSchema = z.object({
 })
 
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
-export const ATTACHMENT_MIME = [
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
-  'application/zip',
+
+// One entry per item in the composer's attach menu; each group's `mime` is what the
+// file dialog is narrowed to. Flattened, this is exactly the bucket allowlist in
+// supabase/migrations/*_storage_attachments.sql - keep the two in step.
+export const ATTACHMENT_GROUPS = [
+  { label: 'Photo', mime: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] },
+  { label: 'Document', mime: ['application/pdf', 'text/plain'] },
+  { label: 'Archive', mime: ['application/zip'] },
 ] as const
+
+export const ATTACHMENT_MIME = ATTACHMENT_GROUPS.flatMap((group) => group.mime)
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 export const AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'] as const

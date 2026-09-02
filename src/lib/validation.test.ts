@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  ATTACHMENT_RULE, AVATAR_RULE, checkFile,
+  ATTACHMENT_MIME, ATTACHMENT_RULE, AVATAR_RULE, checkFile,
   newPasswordSchema, resetRequestSchema, safeRedirectPath, signUpSchema, usernameSchema,
 } from './validation.ts'
 
@@ -88,4 +88,13 @@ test('checkFile accepts allowed files and names what is wrong with the rest', ()
     checkFile({ size: 1024, type: 'application/x-msdownload' }, ATTACHMENT_RULE),
     ATTACHMENT_RULE.wrongType,
   )
+})
+
+// The composer's attach menu splits this list into groups; the flattened set must
+// stay exactly what the bucket allows (supabase/migrations/*_storage_attachments.sql).
+test('the attach groups flatten to the bucket allowlist', () => {
+  assert.deepEqual(ATTACHMENT_MIME, [
+    'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+    'application/pdf', 'text/plain', 'application/zip',
+  ])
 })
