@@ -1,15 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Paperclip, Send } from 'lucide-react'
+import { ArrowLeft, FileArchive, FileText, Image as ImageIcon, Paperclip, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { UserAvatar } from '@/components/user-avatar'
 import { Attachment } from './attachment'
-import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIME } from '@/lib/validation'
+import { ATTACHMENT_GROUPS, ATTACHMENT_MIME, ATTACHMENT_RULE, checkFile } from '@/lib/validation'
 import { emitPixels } from '@/lib/pixel-burst'
 import type { Conversation, Message } from '@/lib/types'
+
+const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted'
+
+const ATTACH_ICON = { Photo: ImageIcon, Document: FileText, Archive: FileArchive }
 
 type Props = {
   me: string
@@ -31,6 +36,7 @@ export function MessageThread({
   onSend, onUpload, onTyping, onLoadOlder, onBack,
 }: Props) {
   const [draft, setDraft] = useState('')
+  const [attachOpen, setAttachOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -63,18 +69,24 @@ export function MessageThread({
     onSend(body)
   }
 
+  /* Narrows the dialog to one group. The attribute is set on the node rather than
+     through state because React would not flush a re-render before .click(), so the
+     dialog would open with the previous group's filter. */
+  function openPicker(accept: string) {
+    setAttachOpen(false)
+    const input = fileRef.current
+    if (!input) return
+    input.accept = accept
+    input.click()
+  }
+
   function pickFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    // The bucket enforces both of these too; checking here just avoids a
-    // pointless upload and gives a better message.
-    if (file.size > ATTACHMENT_MAX_BYTES) {
-      toast.error('Files must be 10 MB or smaller')
-      return
-    }
-    if (!(ATTACHMENT_MIME as readonly string[]).includes(file.type)) {
-      toast.error('That file type is not allowed')
+    const problem = checkFile(file, ATTACHMENT_RULE)
+    if (problem) {
+      toast.error(problem)
       return
     }
     onUpload(file)
@@ -93,14 +105,11 @@ export function MessageThread({
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <Avatar className="h-9 w-9">
-          {conversation.other_avatar_url && (
-            <AvatarImage src={conversation.other_avatar_url} alt="" />
-          )}
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {conversation.other_username.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          className="h-9 w-9"
+          name={conversation.other_username}
+          avatarUrl={conversation.other_avatar_url}
+        />
         <div>
           <p className="font-medium leading-tight">{conversation.other_username}</p>
           <p className="text-xs text-muted-foreground">
@@ -161,15 +170,31 @@ export function MessageThread({
           accept={ATTACHMENT_MIME.join(',')}
           onChange={pickFile}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Attach a file"
-          onClick={() => fileRef.current?.click()}
-        >
-          <Paperclip className="h-4 w-4" />
-        </Button>
+        {/* The file input stays a sibling: inside PopoverContent it would unmount
+            with the popover before the dialog could open. */}
+        <Popover open={attachOpen} onOpenChange={setAttachOpen}>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" aria-label="Attach a file">
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" className="w-44 p-1">
+            {ATTACHMENT_GROUPS.map((group) => {
+              const Icon = ATTACH_ICON[group.label]
+              return (
+                <button
+                  key={group.label}
+                  type="button"
+                  className={ITEM}
+                  onClick={() => openPicker(group.mime.join(','))}
+                >
+                  <Icon className="h-4 w-4" />
+                  {group.label}
+                </button>
+              )
+            })}
+          </PopoverContent>
+        </Popover>
         <span className="relative flex flex-1">
           <Input
             ref={inputRef}

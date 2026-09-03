@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/user-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +11,9 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
-import { AVATAR_MAX_BYTES, AVATAR_MIME, usernameSchema } from '@/lib/validation'
+import {
+  AVATAR_MIME, AVATAR_RULE, USERNAME_PATTERN, checkFile, usernameSchema,
+} from '@/lib/validation'
 
 type Props = {
   me: string
@@ -38,12 +40,12 @@ export function ProfileDialog({
           className="flex min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted/50"
           aria-label="Edit your profile"
         >
-          <Avatar className="h-7 w-7 shrink-0">
-            {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-              {username.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            className="h-7 w-7 shrink-0"
+            fallbackClassName="text-xs"
+            name={username}
+            avatarUrl={avatarUrl}
+          />
           <span className="truncate font-semibold">{username}</span>
         </button>
       </DialogTrigger>
@@ -74,14 +76,9 @@ function ProfileForm({
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function uploadAvatar(file: File) {
-    // The bucket enforces both of these too; checking here just avoids a
-    // pointless upload and gives a better message.
-    if (file.size > AVATAR_MAX_BYTES) {
-      toast.error('Avatars must be 2 MB or smaller')
-      return
-    }
-    if (!(AVATAR_MIME as readonly string[]).includes(file.type)) {
-      toast.error('Use a PNG, JPEG or WebP image')
+    const problem = checkFile(file, AVATAR_RULE)
+    if (problem) {
+      toast.error(problem)
       return
     }
 
@@ -162,12 +159,12 @@ function ProfileForm({
 
       <div className="space-y-4 py-4">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            {preview && <AvatarImage src={preview} alt="" />}
-            <AvatarFallback className="bg-primary text-xl text-primary-foreground">
-              {(draftName || username).charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            className="h-16 w-16"
+            fallbackClassName="text-xl"
+            name={draftName || username}
+            avatarUrl={preview}
+          />
           <input
             ref={fileRef}
             type="file"
@@ -207,7 +204,7 @@ function ProfileForm({
             id="profile-username"
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
-            pattern="[A-Za-z0-9_]{3,24}"
+            pattern={USERNAME_PATTERN}
             required
           />
         </div>

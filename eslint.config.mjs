@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Nested git worktrees carry their own build output, and `eslint .` walks
+    // into it -- 30k phantom problems from generated chunks that bury the real
+    // ones. The globs above are root-anchored, so they do not cover it.
+    "**/.next/**",
+    ".claude/**",
   ]),
 ]);
 

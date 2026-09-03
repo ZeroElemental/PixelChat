@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
 } from '@/components/ui/card'
+import { USERNAME_PATTERN } from '@/lib/validation'
 
 export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: string }) {
   const isSignUp = mode === 'signup'
@@ -47,7 +48,7 @@ export function AuthForm({ mode, next }: { mode: 'signin' | 'signup'; next: stri
                 <Label htmlFor="username">Username</Label>
                 <Input
                   id="username" name="username" required autoComplete="username"
-                  pattern="[A-Za-z0-9_]{3,24}" placeholder="pixelfan"
+                  pattern={USERNAME_PATTERN} placeholder="pixelfan"
                 />
               </div>
             )}

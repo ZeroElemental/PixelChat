@@ -123,19 +123,38 @@ real SMTP provider first — nothing in the app needs to change.
 ```
 src/
   app/
-    auth/            server actions for sign in/up/out, and the callback route
-    chat/            the authenticated chat page (server-rendered shell)
-    login, signup    auth pages
+    (site)/            public pages -- landing, auth, about, FAQ, legal
+    auth/              server actions for sign in/up/out, and the callback route
+    chat/              the authenticated chat page (server-rendered shell)
   components/
-    chat/            chat shell, thread, attachments, friends, profile
-    theme-toggle.tsx light/dark switch
-    ui/              shadcn primitives
+    chat/
+      chat-shell.tsx   owns chat state and wires the pieces together
+      use-realtime.ts  channel subscriptions, presence and typing
+      conversation-list.tsx, message-thread.tsx, attachment.tsx
+      friends.tsx, profile-dialog.tsx, settings-dialog.tsx, app-menu.tsx
+    content/           page copy shared between routes and in-place dialogs
+    user-avatar.tsx    avatar with initial fallback, used everywhere
+    site-*.tsx         header, nav and footer for the public pages
+    ui/                shadcn primitives -- regenerated, do not hand-edit
   lib/
-    supabase/        browser and server client factories, generated types
-    validation.ts    zod schemas shared by forms and actions
-  proxy.ts           session refresh and route gating (Next 16 renamed
-                     middleware.ts to proxy.ts)
+    supabase/          browser and server client factories, generated types
+    queries.ts         reads shared by server and browser callers
+    validation.ts      zod schemas, input rules and limits
+    prefs.ts           client-side preferences (sound, motion)
+  proxy.ts             session refresh and route gating (Next 16 renamed
+                       middleware.ts to proxy.ts)
 supabase/
-  migrations/        schema, RLS policies, triggers, functions, storage buckets
-  tests/rls_test.sql security regression test
+  migrations/          schema, RLS policies, triggers, functions, storage buckets
+  tests/rls_test.sql   security regression test
 ```
+
+A few conventions worth knowing before adding to this:
+
+- **Rules live in `lib/validation.ts`**, once. `USERNAME_PATTERN` feeds both the
+  zod schema and the HTML `pattern` attributes; `checkFile` and the `*_RULE`
+  objects hold the upload limits. The database enforces all of it again anyway --
+  these exist to fail early with a better message, not to be the only check.
+- **Queries used from both sides go in `lib/queries.ts`** and take a client as
+  an argument, so the same read works server-side and in the browser.
+- **`components/ui/` is generated.** Edits there are lost the next time a
+  primitive is re-added; put shared presentation one level up instead.
