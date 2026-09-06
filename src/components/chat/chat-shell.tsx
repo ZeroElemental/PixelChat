@@ -12,7 +12,7 @@ import { useConversationChannels, useFriendNotifications } from './use-realtime'
 import { beep } from '@/lib/prefs'
 import { fetchPendingRequests } from '@/lib/queries'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
-import { usernameSchema } from '@/lib/validation'
+import { formatLatLng, usernameSchema } from '@/lib/validation'
 
 const PAGE_SIZE = 50
 
@@ -171,7 +171,9 @@ export function ChatShell({
     setHasMore((data?.length ?? 0) === PAGE_SIZE)
   }
 
-  async function send(body: string) {
+  // A location is just a body under a different kind, so it takes the same path
+  // -- including the optimistic row the realtime echo reconciles against.
+  async function send(body: string, kind: 'text' | 'location' = 'text') {
     if (!activeId) return
     // Client-generated id so the optimistic row and the broadcast echo match.
     const id = crypto.randomUUID()
@@ -182,7 +184,7 @@ export function ChatShell({
       body,
       attachment_path: null,
       attachment_name: null,
-      kind: 'text',
+      kind,
       created_at: new Date().toISOString(),
     }
     setMessages((prev) => [...prev, optimistic])
@@ -192,7 +194,7 @@ export function ChatShell({
       conversation_id: activeId,
       sender_id: me,
       body,
-      kind: 'text',
+      kind,
     })
 
     if (error) {
@@ -346,6 +348,7 @@ export function ChatShell({
           hasMore={hasMore}
           onSend={send}
           onUpload={upload}
+          onSendLocation={(lat, lng) => send(formatLatLng(lat, lng), 'location')}
           onTyping={handleTyping}
           onLoadOlder={loadOlder}
           onBack={() => setActiveId(null)}

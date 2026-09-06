@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  ATTACHMENT_MIME, ATTACHMENT_RULE, AVATAR_RULE, checkFile,
-  newPasswordSchema, resetRequestSchema, safeRedirectPath, signUpSchema, usernameSchema,
+  ATTACHMENT_MIME, ATTACHMENT_RULE, AVATAR_RULE, checkFile, formatLatLng,
+  newPasswordSchema, parseLatLng, resetRequestSchema, safeRedirectPath, signUpSchema,
+  usernameSchema,
 } from './validation.ts'
 
 const BACKSLASH = String.fromCharCode(92)
@@ -97,4 +98,35 @@ test('the attach groups flatten to the bucket allowlist', () => {
     'image/png', 'image/jpeg', 'image/gif', 'image/webp',
     'application/pdf', 'text/plain', 'application/zip',
   ])
+})
+
+test('formatLatLng and parseLatLng round-trip a point', () => {
+  assert.equal(formatLatLng(19.076, 72.8777), '19.076000,72.877700')
+  assert.deepEqual(parseLatLng(formatLatLng(-33.8688, 151.2093)), {
+    lat: -33.8688,
+    lng: 151.2093,
+  })
+  assert.deepEqual(parseLatLng('0,0'), { lat: 0, lng: 0 })
+})
+
+test('parseLatLng refuses anything that is not two in-range coordinates', () => {
+  for (const hostile of [
+    '91,0',                 // past the poles
+    '-91,0',
+    '0,181',
+    '0,-181',
+    '1,2,3',                // three values
+    '1',                    // one
+    '',
+    ' 1,2',                 // padding the regex must not tolerate
+    '1,2 ',
+    'NaN,0',
+    '1e2,0',                // exponent form would survive a bare Number()
+    '0,0&layer=evil',       // trailing junk aimed at the map URL
+    '<img src=x>,0',
+    null,
+    undefined,
+  ]) {
+    assert.equal(parseLatLng(hostile as string), null, `allowed ${String(hostile)}`)
+  }
 })

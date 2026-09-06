@@ -1,7 +1,7 @@
 # PixelChat
 
-Real-time 1:1 chat — friend requests, presence, typing indicators, and file
-attachments. Built with Next.js (App Router) and Supabase.
+Real-time 1:1 chat — friend requests, presence, typing indicators, file
+attachments and location sharing. Built with Next.js (App Router) and Supabase.
 
 ## Stack
 
@@ -12,6 +12,7 @@ attachments. Built with Next.js (App Router) and Supabase.
 | Data | Supabase Postgres, access controlled entirely by Row Level Security |
 | Real-time | Supabase Realtime — private Broadcast channels and Presence |
 | Files | Supabase Storage, private bucket with signed URLs |
+| Maps | Leaflet with OpenStreetMap tiles — no API key, no account |
 | Errors | Sentry (`@sentry/nextjs`) |
 | Hosting | Vercel |
 
@@ -131,6 +132,7 @@ src/
       chat-shell.tsx   owns chat state and wires the pieces together
       use-realtime.ts  channel subscriptions, presence and typing
       conversation-list.tsx, message-thread.tsx, attachment.tsx
+      location.tsx     location bubble and the map picker
       friends.tsx, profile-dialog.tsx, settings-dialog.tsx, app-menu.tsx
     content/           page copy shared between routes and in-place dialogs
     user-avatar.tsx    avatar with initial fallback, used everywhere

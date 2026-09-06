@@ -90,3 +90,29 @@ export function safeRedirectPath(value: unknown, fallback = '/chat'): string {
   if (!/^\/(?![/\\])/.test(value)) return fallback
   return value
 }
+
+/**
+ * A shared location is stored as `"lat,lng"` in `messages.body` under
+ * `kind = 'location'`. Six decimals is roughly 0.1 m -- past that the digits are
+ * noise, and they would only make the string longer.
+ */
+export function formatLatLng(lat: number, lng: number): string {
+  return `${lat.toFixed(6)},${lng.toFixed(6)}`
+}
+
+/**
+ * The read side of the same rule, and a trust boundary: `body` comes back from
+ * the database and is interpolated straight into a map URL. Anything that is not
+ * two finite, in-range numbers returns null rather than being passed through.
+ *
+ * Mirrors messages_payload_ck (supabase/migrations/*_location_messages.sql) --
+ * keep the two in step.
+ */
+export function parseLatLng(body: string | null | undefined): { lat: number; lng: number } | null {
+  if (typeof body !== 'string') return null
+  // Anchored, and no trailing junk: '0,0&layer=evil' must not reach a URL.
+  if (!/^-?\d{1,3}(\.\d{1,7})?,-?\d{1,3}(\.\d{1,7})?$/.test(body)) return null
+  const [lat, lng] = body.split(',').map(Number)
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null
+  return { lat, lng }
+}
