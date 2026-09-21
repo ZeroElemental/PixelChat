@@ -17,6 +17,7 @@ declare
   carol uuid := '33333333-3333-4333-8333-333333333333';
   conv  uuid;
   n     int;
+  bad   text;
   failures text[] := '{}';
 begin
   -- ---- fixtures ----------------------------------------------------------
@@ -48,6 +49,18 @@ begin
                  json_build_object('sub', alice, 'role', 'authenticated')::text);
   insert into public.messages (conversation_id, sender_id, body, kind)
   values (conv, alice, 'hello bob', 'text');
+
+  -- A location body is interpolated into a map URL by the client, so the shape
+  -- has to hold at the only layer that cannot be skipped. These all roll back
+  -- their own sub-block, so the message count below is unchanged.
+  for bad in select unnest(array['91,0', '0,181', '1,2,3', 'NaN,0', '0,0&layer=evil'])
+  loop
+    begin
+      insert into public.messages (conversation_id, sender_id, body, kind)
+      values (conv, alice, bad, 'location');
+      failures := failures || ('a bogus location was stored: ' || bad);
+    exception when check_violation then null; end;
+  end loop;
 
   -- ---- positive controls -------------------------------------------------
   execute format('set local request.jwt.claims = %L',

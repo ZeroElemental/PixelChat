@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, FileArchive, FileText, Image as ImageIcon, Paperclip, Send } from 'lucide-react'
+import {
+  ArrowLeft, FileArchive, FileText, Image as ImageIcon, LocateFixed, Map, Paperclip, Send,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { UserAvatar } from '@/components/user-avatar'
 import { Attachment } from './attachment'
+import { LocationDialog, LocationMessage, locate } from './location'
 import { ATTACHMENT_GROUPS, ATTACHMENT_MIME, ATTACHMENT_RULE, checkFile } from '@/lib/validation'
 import { emitPixels } from '@/lib/pixel-burst'
 import type { Conversation, Message } from '@/lib/types'
@@ -25,6 +28,7 @@ type Props = {
   hasMore: boolean
   onSend: (body: string) => void
   onUpload: (file: File) => void
+  onSendLocation: (lat: number, lng: number) => void
   onTyping: (typing: boolean) => void
   onLoadOlder: () => void
   /* Mobile shows one pane at a time, so the thread needs a way back to the list. */
@@ -33,10 +37,11 @@ type Props = {
 
 export function MessageThread({
   me, conversation, messages, isOnline, isTyping, hasMore,
-  onSend, onUpload, onTyping, onLoadOlder, onBack,
+  onSend, onUpload, onSendLocation, onTyping, onLoadOlder, onBack,
 }: Props) {
   const [draft, setDraft] = useState('')
   const [attachOpen, setAttachOpen] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -78,6 +83,16 @@ export function MessageThread({
     if (!input) return
     input.accept = accept
     input.click()
+  }
+
+  async function shareCurrentLocation() {
+    setAttachOpen(false)
+    try {
+      const { lat, lng } = await locate()
+      onSendLocation(lat, lng)
+    } catch (error) {
+      toast.error((error as Error).message)
+    }
   }
 
   function pickFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -137,9 +152,13 @@ export function MessageThread({
                   mine ? 'bg-primary text-primary-foreground' : 'bg-muted',
                 ].join(' ')}
               >
-                {message.kind === 'text'
-                  ? <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                  : <Attachment message={message} />}
+                {message.kind === 'text' ? (
+                  <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                ) : message.kind === 'location' ? (
+                  <LocationMessage message={message} />
+                ) : (
+                  <Attachment message={message} />
+                )}
                 <time
                   dateTime={message.created_at}
                   className="mt-1 block font-mono text-[10px] opacity-80"
@@ -174,7 +193,7 @@ export function MessageThread({
             with the popover before the dialog could open. */}
         <Popover open={attachOpen} onOpenChange={setAttachOpen}>
           <PopoverTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="Attach a file">
+            <Button type="button" variant="ghost" size="icon" aria-label="Attach a file or share a location">
               <Paperclip className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
@@ -193,8 +212,27 @@ export function MessageThread({
                 </button>
               )
             })}
+            <div className="my-1 border-t" />
+            <button type="button" className={ITEM} onClick={shareCurrentLocation}>
+              <LocateFixed className="h-4 w-4" />
+              Current location
+            </button>
+            <button
+              type="button"
+              className={ITEM}
+              onClick={() => {
+                setAttachOpen(false)
+                setMapOpen(true)
+              }}
+            >
+              <Map className="h-4 w-4" />
+              Choose on map
+            </button>
           </PopoverContent>
         </Popover>
+        {/* A sibling of the popover for the same reason as the file input above:
+            inside PopoverContent it would unmount before it could open. */}
+        <LocationDialog open={mapOpen} onOpenChange={setMapOpen} onPick={onSendLocation} />
         <span className="relative flex flex-1">
           <Input
             ref={inputRef}
