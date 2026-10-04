@@ -44,6 +44,8 @@ export function ChatShell({
 
   const [conversations, setConversations] = useState(initialConversations)
   const [activeId, setActiveId] = useState<string | null>(null)
+  // Only a return from a thread slides the list in -- not the first paint.
+  const [cameBack, setCameBack] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [hasMore, setHasMore] = useState(false)
   const [requests, setRequests] = useState<FriendRequest[]>(initialRequests)
@@ -306,15 +308,18 @@ export function ChatShell({
   // --- render ---------------------------------------------------------------
 
   return (
-    <div className="flex h-dvh bg-background pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-foreground">
+    <div className="flex h-dvh overflow-hidden bg-background pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-foreground">
       {/* One pane at a time below md: the list, or the open thread. Side by side
-          from md up, where the rail's width is the viewer's to drag. */}
+          from md up, where the rail's width is the viewer's to drag. Below md
+          the panes slide like a native stack; overflow-hidden on the root keeps
+          the off-screen half from adding a horizontal scrollbar. */}
       <aside
         style={{ '--rail': `${rail}px` } as React.CSSProperties}
         className={[
           active ? 'hidden md:flex' : 'flex',
+          cameBack && 'max-md:animate-in max-md:slide-in-from-left-1/3 max-md:fade-in-0 max-md:duration-200 ease-pixel',
           'w-full shrink-0 flex-col border-r-2 md:w-(--rail)',
-        ].join(' ')}
+        ].filter(Boolean).join(' ')}
       >
         <header className="flex items-center justify-between border-b-2 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <ProfileDialog
@@ -364,7 +369,10 @@ export function ChatShell({
           onSendLocation={(lat, lng) => send(formatLatLng(lat, lng), 'location')}
           onTyping={handleTyping}
           onLoadOlder={loadOlder}
-          onBack={() => setActiveId(null)}
+          onBack={() => {
+            setActiveId(null)
+            setCameBack(true)
+          }}
         />
       ) : (
         <section className="hidden flex-1 items-center justify-center md:flex">

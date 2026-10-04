@@ -108,7 +108,8 @@ export function MessageThread({
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
+    // Mounts each time a thread opens, so below md it slides in from the right.
+    <section className="flex min-w-0 flex-1 flex-col ease-pixel max-md:animate-in max-md:slide-in-from-right max-md:duration-200">
       <header className="flex items-center gap-3 border-b-2 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <Button
           type="button"
