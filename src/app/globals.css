@@ -22,6 +22,13 @@
   --shadow-pixel: 4px 4px 0 0 var(--border);
   --shadow-pixel-lg: 6px 6px 0 0 var(--border);
 
+  /* Structural motion -- panes, dialogs, hovers, arriving messages -- eases.
+     Decorative motion (caret, typing blocks, burst) stays stepped below. These
+     two become the default for every transition-* utility. */
+  --ease-pixel: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: var(--ease-pixel);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -297,4 +304,23 @@
 .reduce-motion .pixel-burst > i,
 .reduce-motion .pixel-caret {
   animation: none;
+}
+
+/* Transitions and enter/exit animations collapse to near-instant rather than
+   none: Radix waits on animationend before unmounting a closed dialog, and a
+   0.01ms animation still fires it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
 }
