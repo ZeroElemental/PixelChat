@@ -2,7 +2,7 @@ export const metadata = { title: 'Privacy · PixelChat' }
 
 export default function PrivacyPage() {
   return (
-    <article className="mx-auto w-full max-w-2xl space-y-6 px-4 py-16">
+    <article className="mx-auto w-full max-w-2xl space-y-6 gutter section-y">
       <h1 className="font-display text-2xl md:text-3xl">Privacy</h1>
       <p className="text-sm text-muted-foreground">
         A plain-English summary of what PixelChat stores and why. It is not legal
