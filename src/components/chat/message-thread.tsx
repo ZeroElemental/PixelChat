@@ -23,6 +23,11 @@ const ATTACH_ICON = { Photo: ImageIcon, Document: FileText, Archive: FileArchive
 // How close to the bottom still counts as "reading the latest".
 const NEAR_BOTTOM = 80
 
+// ponytail: "new" means created after the thread opened, with slack for clock
+// skew against the server. A client clock far ahead of the server can mute the
+// animation; it never breaks anything, so a per-id baseline isn't worth it.
+const FRESH_SLACK_MS = 2000
+
 type Props = {
   me: string
   conversation: Conversation
@@ -46,6 +51,8 @@ export function MessageThread({
   const [draft, setDraft] = useState('')
   const [attachOpen, setAttachOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
+  // The thread is keyed per conversation, so this is when this chat opened.
+  const [openedAt] = useState(() => Date.now())
   const endRef = useRef<HTMLDivElement>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
   // Scroll bookkeeping from the previous render, so a change can be told apart:
@@ -203,8 +210,16 @@ export function MessageThread({
 
           {messages.map((message) => {
             const mine = message.sender_id === me
+            // Only arrivals animate -- not the first page, not older pages.
+            const fresh = Date.parse(message.created_at) > openedAt - FRESH_SLACK_MS
             return (
-              <div key={message.id} className={mine ? 'flex justify-end' : 'flex justify-start'}>
+              <div
+                key={message.id}
+                className={[
+                  mine ? 'flex justify-end' : 'flex justify-start',
+                  fresh && 'animate-in fade-in-0 slide-in-from-bottom-2 duration-200 ease-pixel',
+                ].filter(Boolean).join(' ')}
+              >
                 <div
                   className={[
                     'max-w-[75%] border-2 border-border px-3 py-2 text-sm shadow-pixel-sm',
