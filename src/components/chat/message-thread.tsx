@@ -16,7 +16,7 @@ import { emitPixels } from '@/lib/pixel-burst'
 import { motionReduced } from '@/lib/prefs'
 import type { Conversation, Message } from '@/lib/types'
 
-const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted'
+const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted'
 
 const ATTACH_ICON = { Photo: ImageIcon, Document: FileText, Archive: FileArchive }
 
