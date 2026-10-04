@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { MessageThread } from './message-thread'
@@ -8,13 +8,17 @@ import { AddFriendDialog, FriendRequests } from './friends'
 import { ProfileDialog } from './profile-dialog'
 import { AppMenu } from './app-menu'
 import { ConversationList } from './conversation-list'
+import { RailResizer } from './rail-resizer'
 import { useConversationChannels, useFriendNotifications } from './use-realtime'
-import { beep } from '@/lib/prefs'
+import { beep, RAIL_DEFAULT, railWidth, setRailWidth } from '@/lib/prefs'
 import { fetchPendingRequests } from '@/lib/queries'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
 import { formatLatLng, usernameSchema } from '@/lib/validation'
 
 const PAGE_SIZE = 50
+
+// Storage is only written by this tab's own drags, so there is nothing to watch.
+const noSubscribe = () => () => {}
 
 type Props = {
   me: string
@@ -43,6 +47,12 @@ export function ChatShell({
   const [messages, setMessages] = useState<Message[]>([])
   const [hasMore, setHasMore] = useState(false)
   const [requests, setRequests] = useState<FriendRequest[]>(initialRequests)
+
+  // Hydrates at the default so server and client markup match, then picks up
+  // the stored width. A drag overrides it for the rest of the session.
+  const storedRail = useSyncExternalStore(noSubscribe, railWidth, () => RAIL_DEFAULT)
+  const [draggedRail, setRail] = useState<number | null>(null)
+  const rail = draggedRail ?? storedRail
 
   // Read by realtime callbacks, which would otherwise close over a stale value.
   const activeIdRef = useRef<string | null>(null)
@@ -298,11 +308,12 @@ export function ChatShell({
   return (
     <div className="flex h-dvh bg-background text-foreground">
       {/* One pane at a time below md: the list, or the open thread. Side by side
-          from md up. A fixed 288px rail leaves no room for messages on a phone. */}
+          from md up, where the rail's width is the viewer's to drag. */}
       <aside
+        style={{ '--rail': `${rail}px` } as React.CSSProperties}
         className={[
           active ? 'hidden md:flex' : 'flex',
-          'w-full shrink-0 flex-col border-r-2 md:w-72',
+          'w-full shrink-0 flex-col border-r-2 md:w-(--rail)',
         ].join(' ')}
       >
         <header className="flex items-center justify-between border-b-2 px-3 py-3">
@@ -337,6 +348,8 @@ export function ChatShell({
           onSelect={openConversation}
         />
       </aside>
+
+      <RailResizer width={rail} onChange={setRail} onCommit={setRailWidth} />
 
       {active ? (
         <MessageThread
