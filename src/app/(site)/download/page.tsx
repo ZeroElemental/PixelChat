@@ -11,7 +11,7 @@ export default async function DownloadPage() {
   const signedIn = Boolean(data?.claims)
 
   return (
-    <section className="flex flex-1 items-center justify-center px-4 py-16">
+    <section className="flex flex-1 items-center justify-center gutter section-y">
       <div className="max-w-md space-y-6 text-center">
         <span className="pixel-typing" aria-hidden="true">
           <span />

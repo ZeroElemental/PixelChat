@@ -29,10 +29,11 @@ export function ConversationList({
           onClick={() => onSelect(conversation.conversation_id)}
           aria-current={conversation.conversation_id === activeId}
           className={[
-            'flex w-full items-center gap-3 border-2 p-2 text-left transition-colors',
+            // Rows lift onto the pixel shadow on hover, like the buttons do.
+            'flex w-full items-center gap-3 border-2 p-2 text-left transition-[color,background-color,border-color,box-shadow,translate]',
             conversation.conversation_id === activeId
-              ? 'border-border bg-muted'
-              : 'border-transparent hover:border-border hover:bg-muted/50',
+              ? 'border-border bg-muted shadow-pixel-sm'
+              : 'border-transparent hover:-translate-y-px hover:border-border hover:bg-muted/50 hover:shadow-pixel-sm motion-reduce:hover:translate-y-0',
           ].join(' ')}
         >
           <span className="relative shrink-0">

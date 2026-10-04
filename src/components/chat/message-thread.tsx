@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowLeft, FileArchive, FileText, Image as ImageIcon, LocateFixed, Map, Paperclip, Send,
 } from 'lucide-react'
@@ -13,11 +13,20 @@ import { Attachment } from './attachment'
 import { LocationDialog, LocationMessage, locate } from './location'
 import { ATTACHMENT_GROUPS, ATTACHMENT_MIME, ATTACHMENT_RULE, checkFile } from '@/lib/validation'
 import { emitPixels } from '@/lib/pixel-burst'
+import { motionReduced } from '@/lib/prefs'
 import type { Conversation, Message } from '@/lib/types'
 
-const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted'
+const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted'
 
 const ATTACH_ICON = { Photo: ImageIcon, Document: FileText, Archive: FileArchive }
+
+// How close to the bottom still counts as "reading the latest".
+const NEAR_BOTTOM = 80
+
+// ponytail: "new" means created after the thread opened, with slack for clock
+// skew against the server. A client clock far ahead of the server can mute the
+// animation; it never breaks anything, so a per-id baseline isn't worth it.
+const FRESH_SLACK_MS = 2000
 
 type Props = {
   me: string
@@ -42,15 +51,61 @@ export function MessageThread({
   const [draft, setDraft] = useState('')
   const [attachOpen, setAttachOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
+  // The thread is keyed per conversation, so this is when this chat opened.
+  const [openedAt] = useState(() => Date.now())
   const endRef = useRef<HTMLDivElement>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  // Scroll bookkeeping from the previous render, so a change can be told apart:
+  // an older page prepended, a new message appended, or the first page landing.
+  const atBottom = useRef(true)
+  const lastHeight = useRef(0)
+  const lastFirstId = useRef<string | undefined>(undefined)
+  const lastLastId = useRef<string | undefined>(undefined)
   const fileRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const burstRef = useRef<HTMLSpanElement>(null)
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const firstId = messages[0]?.id
+  const lastId = messages.at(-1)?.id
+  const lastIsMine = messages.at(-1)?.sender_id === me
+
+  // Layout effect: the correction has to land before paint, or a prepend
+  // flashes the wrong messages for a frame.
+  useLayoutEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const firstPage = lastLastId.current === undefined && lastId !== undefined
+    if (firstPage) {
+      // Opening a chat jumps to the latest; animating through history is noise.
+      endRef.current?.scrollIntoView({ behavior: 'auto' })
+    } else if (firstId !== lastFirstId.current && lastId === lastLastId.current) {
+      // "Load older" prepended a page: hold the reader where they were.
+      el.scrollTop += el.scrollHeight - lastHeight.current
+    } else if (lastId !== lastLastId.current && (atBottom.current || lastIsMine)) {
+      // Follow new messages only if already at the bottom, or if it is ours --
+      // never yank someone out of the history they are reading.
+      endRef.current?.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' })
+    }
+    lastHeight.current = el.scrollHeight
+    lastFirstId.current = firstId
+    lastLastId.current = lastId
+  }, [firstId, lastId, lastIsMine])
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isTyping])
+    if (isTyping && atBottom.current) {
+      endRef.current?.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' })
+    }
+  }, [isTyping])
+
+  function trackScroll() {
+    const el = scrollerRef.current
+    if (!el) return
+    atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM
+    // Images finish loading after render and grow the list; keep the baseline
+    // current so the next prepend correction is measured from the real height.
+    lastHeight.current = el.scrollHeight
+  }
 
   useEffect(() => () => {
     if (typingTimeout.current) clearTimeout(typingTimeout.current)
@@ -108,8 +163,9 @@ export function MessageThread({
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-b-2 px-4 py-3">
+    // Mounts each time a thread opens, so below md it slides in from the right.
+    <section className="flex min-w-0 flex-1 flex-col ease-pixel max-md:animate-in max-md:slide-in-from-right max-md:duration-200">
+      <header className="flex items-center gap-3 border-b-2 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <Button
           type="button"
           variant="ghost"
@@ -133,122 +189,143 @@ export function MessageThread({
         </div>
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {hasMore && (
-          <div className="text-center">
-            <Button variant="ghost" size="sm" onClick={onLoadOlder}>
-              Load older messages
-            </Button>
-          </div>
-        )}
-
-        {messages.map((message) => {
-          const mine = message.sender_id === me
-          return (
-            <div key={message.id} className={mine ? 'flex justify-end' : 'flex justify-start'}>
-              <div
-                className={[
-                  'max-w-[75%] border-2 border-border px-3 py-2 text-sm shadow-pixel-sm',
-                  mine ? 'bg-primary text-primary-foreground' : 'bg-muted',
-                ].join(' ')}
-              >
-                {message.kind === 'text' ? (
-                  <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                ) : message.kind === 'location' ? (
-                  <LocationMessage message={message} />
-                ) : (
-                  <Attachment message={message} />
-                )}
-                <time
-                  dateTime={message.created_at}
-                  className="mt-1 block font-mono text-[10px] opacity-80"
-                >
-                  {new Date(message.created_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
-              </div>
+      {/* The scroller spans the pane so its scrollbar sits at the edge; the
+          column inside is capped so bubbles stay a readable width on wide
+          screens. The composer below shares the same cap. Browser scroll
+          anchoring is off because the layout effect above does that job, and
+          doing it twice overshoots. */}
+      <div
+        ref={scrollerRef}
+        onScroll={trackScroll}
+        className="flex-1 overflow-y-auto p-4 [overflow-anchor:none]"
+      >
+        <div className="mx-auto max-w-4xl space-y-3">
+          {hasMore && (
+            <div className="text-center">
+              <Button variant="ghost" size="sm" onClick={onLoadOlder}>
+                Load older messages
+              </Button>
             </div>
-          )
-        })}
+          )}
 
-        {isTyping && (
-          <p className="text-xs text-muted-foreground">
-            {conversation.other_username} is typing…
-          </p>
-        )}
-        <div ref={endRef} />
+          {messages.map((message) => {
+            const mine = message.sender_id === me
+            // Only arrivals animate -- not the first page, not older pages.
+            const fresh = Date.parse(message.created_at) > openedAt - FRESH_SLACK_MS
+            return (
+              <div
+                key={message.id}
+                className={[
+                  mine ? 'flex justify-end' : 'flex justify-start',
+                  fresh && 'animate-in fade-in-0 slide-in-from-bottom-2 duration-200 ease-pixel',
+                ].filter(Boolean).join(' ')}
+              >
+                <div
+                  className={[
+                    'max-w-[75%] border-2 border-border px-3 py-2 text-sm shadow-pixel-sm',
+                    mine ? 'bg-primary text-primary-foreground' : 'bg-muted',
+                  ].join(' ')}
+                >
+                  {message.kind === 'text' ? (
+                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                  ) : message.kind === 'location' ? (
+                    <LocationMessage message={message} />
+                  ) : (
+                    <Attachment message={message} />
+                  )}
+                  <time
+                    dateTime={message.created_at}
+                    className="mt-1 block font-mono text-[10px] opacity-80"
+                  >
+                    {new Date(message.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </time>
+                </div>
+              </div>
+            )
+          })}
+
+          {isTyping && (
+            <p className="text-xs text-muted-foreground">
+              {conversation.other_username} is typing…
+            </p>
+          )}
+          <div ref={endRef} />
+        </div>
       </div>
 
-      <form onSubmit={submit} className="flex items-center gap-2 border-t-2 p-3">
-        <input
-          ref={fileRef}
-          type="file"
-          className="hidden"
-          accept={ATTACHMENT_MIME.join(',')}
-          onChange={pickFile}
-        />
-        {/* The file input stays a sibling: inside PopoverContent it would unmount
-            with the popover before the dialog could open. */}
-        <Popover open={attachOpen} onOpenChange={setAttachOpen}>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="Attach a file or share a location">
-              <Paperclip className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="start" className="w-44 p-1">
-            {ATTACHMENT_GROUPS.map((group) => {
-              const Icon = ATTACH_ICON[group.label]
-              return (
-                <button
-                  key={group.label}
-                  type="button"
-                  className={ITEM}
-                  onClick={() => openPicker(group.mime.join(','))}
-                >
-                  <Icon className="h-4 w-4" />
-                  {group.label}
-                </button>
-              )
-            })}
-            <div className="my-1 border-t" />
-            <button type="button" className={ITEM} onClick={shareCurrentLocation}>
-              <LocateFixed className="h-4 w-4" />
-              Current location
-            </button>
-            <button
-              type="button"
-              className={ITEM}
-              onClick={() => {
-                setAttachOpen(false)
-                setMapOpen(true)
-              }}
-            >
-              <Map className="h-4 w-4" />
-              Choose on map
-            </button>
-          </PopoverContent>
-        </Popover>
-        {/* A sibling of the popover for the same reason as the file input above:
-            inside PopoverContent it would unmount before it could open. */}
-        <LocationDialog open={mapOpen} onOpenChange={setMapOpen} onPick={onSendLocation} />
-        <span className="relative flex flex-1">
-          <Input
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => handleDraft(e.target.value)}
-            placeholder={`Message ${conversation.other_username}`}
-            maxLength={4000}
-            aria-label="Message"
+      <form onSubmit={submit} className="border-t-2 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-4xl items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            accept={ATTACHMENT_MIME.join(',')}
+            onChange={pickFile}
           />
-          {/* Where the burst spawns. Decorative, so it takes no pointer events
-              and is hidden from assistive tech. */}
-          <span ref={burstRef} className="pixel-burst" aria-hidden="true" />
-        </span>
-        <Button type="submit" size="icon" aria-label="Send" disabled={!draft.trim()}>
-          <Send className="h-4 w-4" />
-        </Button>
+          {/* The file input stays a sibling: inside PopoverContent it would unmount
+              with the popover before the dialog could open. */}
+          <Popover open={attachOpen} onOpenChange={setAttachOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" aria-label="Attach a file or share a location">
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-44 p-1">
+              {ATTACHMENT_GROUPS.map((group) => {
+                const Icon = ATTACH_ICON[group.label]
+                return (
+                  <button
+                    key={group.label}
+                    type="button"
+                    className={ITEM}
+                    onClick={() => openPicker(group.mime.join(','))}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {group.label}
+                  </button>
+                )
+              })}
+              <div className="my-1 border-t" />
+              <button type="button" className={ITEM} onClick={shareCurrentLocation}>
+                <LocateFixed className="h-4 w-4" />
+                Current location
+              </button>
+              <button
+                type="button"
+                className={ITEM}
+                onClick={() => {
+                  setAttachOpen(false)
+                  setMapOpen(true)
+                }}
+              >
+                <Map className="h-4 w-4" />
+                Choose on map
+              </button>
+            </PopoverContent>
+          </Popover>
+          {/* A sibling of the popover for the same reason as the file input above:
+              inside PopoverContent it would unmount before it could open. */}
+          <LocationDialog open={mapOpen} onOpenChange={setMapOpen} onPick={onSendLocation} />
+          <span className="relative flex flex-1">
+            <Input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => handleDraft(e.target.value)}
+              placeholder={`Message ${conversation.other_username}`}
+              maxLength={4000}
+              aria-label="Message"
+            />
+            {/* Where the burst spawns. Decorative, so it takes no pointer events
+                and is hidden from assistive tech. */}
+            <span ref={burstRef} className="pixel-burst" aria-hidden="true" />
+          </span>
+          <Button type="submit" size="icon" aria-label="Send" disabled={!draft.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </form>
     </section>
   )

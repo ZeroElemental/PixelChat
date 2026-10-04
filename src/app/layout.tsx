@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans, Silkscreen } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
@@ -30,6 +30,14 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'PixelChat',
   description: 'Fast, simple, real-time chat.',
+}
+
+// cover: draw under the notch and home bar, then pad back in with
+// env(safe-area-inset-*). resizes-content: on Android the keyboard shrinks the
+// layout viewport, so an h-dvh chat keeps its composer above the keyboard.
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

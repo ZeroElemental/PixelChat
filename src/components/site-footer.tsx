@@ -9,7 +9,7 @@ const LINKS = [
 export function SiteFooter() {
   return (
     <footer className="border-t-2">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6 text-sm sm:flex-row sm:justify-between">
+      <div className="site-container flex flex-col items-center gap-3 gutter pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-sm sm:flex-row sm:justify-between">
         <p className="text-muted-foreground">
           <span className="font-display">PixelChat</span>
           {` \u00a9 ${new Date().getFullYear()}`}

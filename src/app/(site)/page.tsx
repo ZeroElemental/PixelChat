@@ -26,12 +26,12 @@ export default async function Home() {
 
   return (
     <>
-      {/* Same section > centred max-w-5xl nesting as the two below, so every
+      {/* Same section > site-container nesting as the two below, so every
           left edge on the page lines up. */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
+      <section className="gutter section-y">
+        <div className="site-container grid items-center gap-10 md:grid-cols-2">
           <div className="space-y-6">
-            <h1 className="font-display text-3xl tracking-tight md:text-5xl">PixelChat</h1>
+            <h1 className="font-display text-[clamp(1.875rem,1rem+4vw,3rem)] tracking-tight">PixelChat</h1>
             <p className="text-xl">Two people, one green screen.</p>
             <p className="max-w-md text-muted-foreground">
               Direct messages between friends. No threads, no channels, no bots.
@@ -53,9 +53,9 @@ export default async function Home() {
 
       {/* The header's Features link points here, so the id has to live on this
           section. scroll-mt clears the sticky header on the jump. */}
-      <section id="features" className="scroll-mt-20 border-t-2 px-4 py-16">
-        {/* max-w-5xl, like the hero, so every section shares one left edge. */}
-        <div className="mx-auto max-w-5xl">
+      <section id="features" className="scroll-mt-20 border-t-2 gutter section-y">
+        {/* site-container, like the hero, so every section shares one left edge. */}
+        <div className="site-container">
           <h2 className="mb-8 font-display text-xl">Specifications</h2>
           <dl>
             {SPEC.map(([term, detail]) => (
@@ -70,8 +70,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-t-2 px-4 py-16">
-        <div className="mx-auto max-w-5xl space-y-6">
+      <section className="border-t-2 gutter section-y">
+        <div className="site-container space-y-6">
           <h2 className="font-display text-xl">What it isn&apos;t</h2>
           <ul className="space-y-3">
             {LIMITS.map((limit) => (

@@ -2,7 +2,7 @@ export const metadata = { title: 'Terms · PixelChat' }
 
 export default function TermsPage() {
   return (
-    <article className="mx-auto w-full max-w-2xl space-y-6 px-4 py-16">
+    <article className="mx-auto w-full max-w-2xl space-y-6 gutter section-y">
       <h1 className="font-display text-2xl md:text-3xl">Terms</h1>
       <p className="text-sm text-muted-foreground">
         A plain-English summary of the deal. It is not legal advice and it is not a

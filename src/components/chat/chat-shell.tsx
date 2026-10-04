@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { MessageThread } from './message-thread'
@@ -8,13 +8,17 @@ import { AddFriendDialog, FriendRequests } from './friends'
 import { ProfileDialog } from './profile-dialog'
 import { AppMenu } from './app-menu'
 import { ConversationList } from './conversation-list'
+import { RailResizer } from './rail-resizer'
 import { useConversationChannels, useFriendNotifications } from './use-realtime'
-import { beep } from '@/lib/prefs'
+import { beep, RAIL_DEFAULT, railWidth, setRailWidth } from '@/lib/prefs'
 import { fetchPendingRequests } from '@/lib/queries'
 import { previewOf, type Conversation, type FriendRequest, type Message } from '@/lib/types'
 import { formatLatLng, usernameSchema } from '@/lib/validation'
 
 const PAGE_SIZE = 50
+
+// Storage is only written by this tab's own drags, so there is nothing to watch.
+const noSubscribe = () => () => {}
 
 type Props = {
   me: string
@@ -40,9 +44,17 @@ export function ChatShell({
 
   const [conversations, setConversations] = useState(initialConversations)
   const [activeId, setActiveId] = useState<string | null>(null)
+  // Only a return from a thread slides the list in -- not the first paint.
+  const [cameBack, setCameBack] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [hasMore, setHasMore] = useState(false)
   const [requests, setRequests] = useState<FriendRequest[]>(initialRequests)
+
+  // Hydrates at the default so server and client markup match, then picks up
+  // the stored width. A drag overrides it for the rest of the session.
+  const storedRail = useSyncExternalStore(noSubscribe, railWidth, () => RAIL_DEFAULT)
+  const [draggedRail, setRail] = useState<number | null>(null)
+  const rail = draggedRail ?? storedRail
 
   // Read by realtime callbacks, which would otherwise close over a stale value.
   const activeIdRef = useRef<string | null>(null)
@@ -296,16 +308,20 @@ export function ChatShell({
   // --- render ---------------------------------------------------------------
 
   return (
-    <div className="flex h-dvh bg-background text-foreground">
+    <div className="flex h-dvh overflow-hidden bg-background pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-foreground">
       {/* One pane at a time below md: the list, or the open thread. Side by side
-          from md up. A fixed 288px rail leaves no room for messages on a phone. */}
+          from md up, where the rail's width is the viewer's to drag. Below md
+          the panes slide like a native stack; overflow-hidden on the root keeps
+          the off-screen half from adding a horizontal scrollbar. */}
       <aside
+        style={{ '--rail': `${rail}px` } as React.CSSProperties}
         className={[
           active ? 'hidden md:flex' : 'flex',
-          'w-full shrink-0 flex-col border-r-2 md:w-72',
-        ].join(' ')}
+          cameBack && 'max-md:animate-in max-md:slide-in-from-left-1/3 max-md:fade-in-0 max-md:duration-200 ease-pixel',
+          'w-full shrink-0 flex-col border-r-2 md:w-(--rail)',
+        ].filter(Boolean).join(' ')}
       >
-        <header className="flex items-center justify-between border-b-2 px-3 py-3">
+        <header className="flex items-center justify-between border-b-2 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <ProfileDialog
             me={me}
             username={profile.username}
@@ -338,8 +354,13 @@ export function ChatShell({
         />
       </aside>
 
+      <RailResizer width={rail} onChange={setRail} onCommit={setRailWidth} />
+
       {active ? (
         <MessageThread
+          // A fresh thread per conversation: the draft, open dialogs and scroll
+          // bookkeeping belong to one chat and must not follow you to the next.
+          key={active.conversation_id}
           me={me}
           conversation={active}
           messages={messages}
@@ -351,7 +372,10 @@ export function ChatShell({
           onSendLocation={(lat, lng) => send(formatLatLng(lat, lng), 'location')}
           onTyping={handleTyping}
           onLoadOlder={loadOlder}
-          onBack={() => setActiveId(null)}
+          onBack={() => {
+            setActiveId(null)
+            setCameBack(true)
+          }}
         />
       ) : (
         <section className="hidden flex-1 items-center justify-center md:flex">
