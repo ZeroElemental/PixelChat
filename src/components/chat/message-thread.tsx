@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowLeft, FileArchive, FileText, Image as ImageIcon, LocateFixed, Map, Paperclip, Send,
 } from 'lucide-react'
@@ -13,11 +13,15 @@ import { Attachment } from './attachment'
 import { LocationDialog, LocationMessage, locate } from './location'
 import { ATTACHMENT_GROUPS, ATTACHMENT_MIME, ATTACHMENT_RULE, checkFile } from '@/lib/validation'
 import { emitPixels } from '@/lib/pixel-burst'
+import { motionReduced } from '@/lib/prefs'
 import type { Conversation, Message } from '@/lib/types'
 
 const ITEM = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted'
 
 const ATTACH_ICON = { Photo: ImageIcon, Document: FileText, Archive: FileArchive }
+
+// How close to the bottom still counts as "reading the latest".
+const NEAR_BOTTOM = 80
 
 type Props = {
   me: string
@@ -43,14 +47,58 @@ export function MessageThread({
   const [attachOpen, setAttachOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  // Scroll bookkeeping from the previous render, so a change can be told apart:
+  // an older page prepended, a new message appended, or the first page landing.
+  const atBottom = useRef(true)
+  const lastHeight = useRef(0)
+  const lastFirstId = useRef<string | undefined>(undefined)
+  const lastLastId = useRef<string | undefined>(undefined)
   const fileRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const burstRef = useRef<HTMLSpanElement>(null)
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const firstId = messages[0]?.id
+  const lastId = messages.at(-1)?.id
+  const lastIsMine = messages.at(-1)?.sender_id === me
+
+  // Layout effect: the correction has to land before paint, or a prepend
+  // flashes the wrong messages for a frame.
+  useLayoutEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const firstPage = lastLastId.current === undefined && lastId !== undefined
+    if (firstPage) {
+      // Opening a chat jumps to the latest; animating through history is noise.
+      endRef.current?.scrollIntoView({ behavior: 'auto' })
+    } else if (firstId !== lastFirstId.current && lastId === lastLastId.current) {
+      // "Load older" prepended a page: hold the reader where they were.
+      el.scrollTop += el.scrollHeight - lastHeight.current
+    } else if (lastId !== lastLastId.current && (atBottom.current || lastIsMine)) {
+      // Follow new messages only if already at the bottom, or if it is ours --
+      // never yank someone out of the history they are reading.
+      endRef.current?.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' })
+    }
+    lastHeight.current = el.scrollHeight
+    lastFirstId.current = firstId
+    lastLastId.current = lastId
+  }, [firstId, lastId, lastIsMine])
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isTyping])
+    if (isTyping && atBottom.current) {
+      endRef.current?.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' })
+    }
+  }, [isTyping])
+
+  function trackScroll() {
+    const el = scrollerRef.current
+    if (!el) return
+    atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM
+    // Images finish loading after render and grow the list; keep the baseline
+    // current so the next prepend correction is measured from the real height.
+    lastHeight.current = el.scrollHeight
+  }
 
   useEffect(() => () => {
     if (typingTimeout.current) clearTimeout(typingTimeout.current)
@@ -136,8 +184,14 @@ export function MessageThread({
 
       {/* The scroller spans the pane so its scrollbar sits at the edge; the
           column inside is capped so bubbles stay a readable width on wide
-          screens. The composer below shares the same cap. */}
-      <div className="flex-1 overflow-y-auto p-4">
+          screens. The composer below shares the same cap. Browser scroll
+          anchoring is off because the layout effect above does that job, and
+          doing it twice overshoots. */}
+      <div
+        ref={scrollerRef}
+        onScroll={trackScroll}
+        className="flex-1 overflow-y-auto p-4 [overflow-anchor:none]"
+      >
         <div className="mx-auto max-w-4xl space-y-3">
           {hasMore && (
             <div className="text-center">
