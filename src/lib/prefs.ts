@@ -1,12 +1,20 @@
 /**
- * Two viewer-local preferences, kept in localStorage because neither belongs to
- * the account: the machine you are on is what decides whether motion is welcome
- * and whether a sound is. Every access is guarded -- localStorage throws outright
- * in some privacy modes, and none of this is worth breaking a page over.
+ * Viewer-local preferences, kept in localStorage because none belongs to the
+ * account: the machine you are on is what decides whether motion is welcome,
+ * how wide the rail fits, and whether a sound is. Every access is guarded --
+ * localStorage throws outright in some privacy modes, and none of this is worth
+ * breaking a page over.
  */
 
 export const MOTION_KEY = 'pixelchat-motion'
 export const SOUND_KEY = 'pixelchat-sound'
+export const RAIL_KEY = 'pixelchat-rail'
+
+/* Conversation rail width on desktop. Narrower than 240px truncates every
+   name; wider than 480px starves the thread on a laptop. */
+export const RAIL_MIN = 240
+export const RAIL_MAX = 480
+export const RAIL_DEFAULT = 288
 
 function read(key: string): string | null {
   try {
@@ -48,6 +56,20 @@ export function soundOn(): boolean {
 
 export function setSoundOn(on: boolean) {
   write(SOUND_KEY, on ? 'on' : 'off')
+}
+
+export function clampRail(width: number): number {
+  if (!Number.isFinite(width)) return RAIL_DEFAULT
+  return Math.round(Math.min(RAIL_MAX, Math.max(RAIL_MIN, width)))
+}
+
+export function railWidth(): number {
+  const stored = read(RAIL_KEY)
+  return stored === null ? RAIL_DEFAULT : clampRail(Number(stored))
+}
+
+export function setRailWidth(width: number) {
+  write(RAIL_KEY, String(clampRail(width)))
 }
 
 // ponytail: one context reused for the life of the tab. Created lazily so it is
