@@ -109,7 +109,7 @@ export function MessageThread({
 
   return (
     <section className="flex min-w-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-b-2 px-4 py-3">
+      <header className="flex items-center gap-3 border-b-2 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <Button
           type="button"
           variant="ghost"
@@ -186,7 +186,7 @@ export function MessageThread({
         </div>
       </div>
 
-      <form onSubmit={submit} className="border-t-2 p-3">
+      <form onSubmit={submit} className="border-t-2 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-4xl items-center gap-2">
           <input
             ref={fileRef}

@@ -306,7 +306,7 @@ export function ChatShell({
   // --- render ---------------------------------------------------------------
 
   return (
-    <div className="flex h-dvh bg-background text-foreground">
+    <div className="flex h-dvh bg-background pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-foreground">
       {/* One pane at a time below md: the list, or the open thread. Side by side
           from md up, where the rail's width is the viewer's to drag. */}
       <aside
@@ -316,7 +316,7 @@ export function ChatShell({
           'w-full shrink-0 flex-col border-r-2 md:w-(--rail)',
         ].join(' ')}
       >
-        <header className="flex items-center justify-between border-b-2 px-3 py-3">
+        <header className="flex items-center justify-between border-b-2 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <ProfileDialog
             me={me}
             username={profile.username}
