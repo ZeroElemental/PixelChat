@@ -358,6 +358,9 @@ export function ChatShell({
 
       {active ? (
         <MessageThread
+          // A fresh thread per conversation: the draft, open dialogs and scroll
+          // bookkeeping belong to one chat and must not follow you to the next.
+          key={active.conversation_id}
           me={me}
           conversation={active}
           messages={messages}
