@@ -111,7 +111,22 @@
   --dust: oklch(0.812 0.171 165 / 42%);
 }
 
+/* Fluid gutters and section rhythm: scale with the viewport instead of
+   jumping at breakpoints. */
+@utility gutter {
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+}
+
+@utility section-y {
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
 @layer base {
+  /* 16px on phones easing to 17px by ~1050px. Expressed in rem, so a larger
+     browser default still scales everything. */
+  html {
+    font-size: clamp(1rem, 0.9rem + 0.25vw, 1.0625rem);
+  }
   * {
     @apply border-border outline-ring/50;
   }
